@@ -1,61 +1,3773 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>En construcción</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Duelo de Estrellas — 8×8 / 10×10 / 10×8</title>
+<style>
+  :root{
+    --bg:#0e1014; --panel:#171a20; --panel-2:#1f232c; --line:#2c313b;
+    --text:#e8e6e1; --muted:#8b919e; --gold:#d4a843;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(circle at 30% 0%, #1a1e28 0%, #0e1014 60%, #07090c 100%);
+    color:var(--text);
+    padding:16px; min-height:100vh;
+    display:flex;
+  }
+  .app{
+    margin:auto;
+    display:flex; gap:18px; align-items:flex-start;
+    max-width:1400px; width:100%; justify-content:center;
+  }
+  .panel{
+    width:300px; flex:0 0 auto; background:linear-gradient(180deg,var(--panel),#11141a);
+    border:1px solid var(--line); border-radius:16px; padding:20px;
+    box-shadow:0 18px 50px rgba(0,0,0,.65);
+    max-height:calc(100vh - 32px);
+    overflow-y:auto;
+  }
+  .panel::-webkit-scrollbar{width:8px;}
+  .panel::-webkit-scrollbar-track{background:rgba(255,255,255,.03);}
+  .panel::-webkit-scrollbar-thumb{background:rgba(212,168,67,.35); border-radius:4px;}
+  h1{
+    margin:0 0 2px; font-size:17px; letter-spacing:.14em; text-transform:uppercase;
+    font-weight:600; line-height:1.15;
+    background:linear-gradient(90deg,#f0d9a8,#d4a843 60%,#a87c2c);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .subtitle{font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:18px;}
+  .status{
+    display:flex; align-items:center; gap:9px; background:var(--panel-2);
+    border:1px solid var(--line); border-radius:10px; padding:11px 13px;
+    font-size:13.5px; font-weight:500; min-height:44px; margin-bottom:14px;
+    transition:background .25s, border-color .25s;
+  }
+  .status.over{background:linear-gradient(90deg,rgba(212,168,67,.22),rgba(212,168,67,.06)); border-color:rgba(212,168,67,.55);}
+  .status.choose{background:linear-gradient(90deg,rgba(255,160,50,.22),rgba(255,160,50,.06)); border-color:rgba(255,160,50,.55);}
+  .status.must{background:linear-gradient(90deg,rgba(224,82,82,.18),rgba(224,82,82,.04)); border-color:rgba(224,82,82,.45);}
+  .status.chain{background:linear-gradient(90deg,rgba(255,100,100,.25),rgba(255,100,100,.08)); border-color:rgba(255,100,100,.6);}
+  .status.edit{background:linear-gradient(90deg,rgba(120,180,255,.22),rgba(120,180,255,.06)); border-color:rgba(120,180,255,.55);}
+  .status.kingblock{background:linear-gradient(90deg,rgba(255,140,40,.22),rgba(255,140,40,.06)); border-color:rgba(255,140,40,.55);}
+  .status.busy{background:linear-gradient(90deg,rgba(120,220,180,.22),rgba(120,220,180,.06)); border-color:rgba(120,220,180,.55);}
+  .status.replay{background:linear-gradient(90deg,rgba(170,130,230,.25),rgba(170,130,230,.06)); border-color:rgba(170,130,230,.6);}
+  .dot{width:13px;height:13px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 1px rgba(0,0,0,.6) inset;}
+  .dot.white{background:radial-gradient(circle at 35% 30%,#ffffff,#909090);}
+  .dot.black{background:radial-gradient(circle at 35% 30%,#808080,#0a0a0a);}
+  .dot.gold{background:radial-gradient(circle at 35% 30%,#ffe9a8,#d4a843);}
+  .dot.idle{background:radial-gradient(circle at 35% 30%,#8b919e,#4a4f58);}
+  .dot.replay{background:radial-gradient(circle at 35% 30%,#d0b0ff,#8a5ad0);animation:pulse 1.4s infinite;}
+  .dot.choose{background:radial-gradient(circle at 35% 30%,#ffd0a0,#ff8020);animation:pulse 1s infinite;}
+  .dot.capture{background:radial-gradient(circle at 35% 30%,#ff8a8a,#e05252);animation:pulse .8s infinite;}
+  .dot.edit{background:radial-gradient(circle at 35% 30%,#a0d0ff,#3f88e0);}
+  .dot.kingblock{background:radial-gradient(circle at 35% 30%,#ffb070,#e08020);}
+  .dot.busy{background:radial-gradient(circle at 35% 30%,#9fe0c0,#3fb950);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      color: #ffffff;
-      text-align: center;
-      padding: 24px;
-    }
+  .bottom-stack{
+    position:fixed; right:14px; bottom:12px; z-index:60;
+    display:flex; flex-direction:column; gap:8px; align-items:flex-end;
+    pointer-events:none; user-select:none;
+  }
+  .counters-card{
+    padding:9px 13px; border-radius:12px;
+    display:flex; flex-direction:column; gap:5px;
+    font-size:11.5px; line-height:1.45; letter-spacing:.04em;
+    background:linear-gradient(135deg, rgba(14,16,20,.93), rgba(24,34,26,.86) 55%, rgba(38,18,10,.90));
+    border:1px solid rgba(63,185,80,.32);
+    box-shadow:0 10px 30px rgba(0,0,0,.65), 0 0 20px rgba(63,185,80,.10), 0 0 26px rgba(255,94,0,.14);
+    backdrop-filter:blur(4px);
+    max-width:min(78vw, 350px);
+  }
+  .counters-card .crow{display:flex; align-items:center; gap:10px; justify-content:space-between;}
+  .counters-card .cname{font-weight:700; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#cfc9bd; flex:0 0 auto;}
+  .counters-card .cstat{display:inline-flex; align-items:center; gap:4px;color:#c9d1d9;white-space:nowrap;font-size:11.5px;line-height:1;}
+  .counters-card .cstat .ico{display:inline-block;width:1em;text-align:center;font-size:13px;line-height:1;filter:drop-shadow(0 0 1px rgba(0,0,0,.5));}
+  .counters-card .cstat b{font-weight:700;font-size:11.5px;min-width:1.2em;text-align:right;font-variant-numeric:tabular-nums;}
+  .counters-card .cstat.fugaces .ico.fugaz-w{ color:#ffd700; }
+  .counters-card .cstat.fugaces .ico.fugaz-g{ color:#ff7020; }
+  .counters-card .cstat.fugaces b{ color:#e0b45c; }
+  .counters-card .cstat.errant .ico{ color:#d4a843; }
+  .counters-card .cstat.errant b{ color:#d4a843; }
+  .counters-card .cstat.fixed .ico{ color:#c8a0ff; }
+  .counters-card .cstat.fixed b{ color:#c8a0ff; }
+  .counters-card .cstat.streak .ico{ color:#ffb070; }
+  .counters-card .cstat.streak b{ color:#ffb070; }
 
-    .contenedor {
-      max-width: 600px;
-      background: rgba(255, 255, 255, 0.12);
-      padding: 48px 32px;
-      border-radius: 20px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
-      backdrop-filter: blur(8px);
-    }
+  .credit{
+    max-width:min(78vw, 350px); padding:9px 13px; border-radius:12px;
+    text-align:right; font-size:10.5px; line-height:1.45; letter-spacing:.05em;
+    background:linear-gradient(135deg, rgba(14,16,20,.93), rgba(24,34,26,.86) 55%, rgba(38,18,10,.90));
+    border:1px solid rgba(63,185,80,.32);
+    box-shadow:0 10px 30px rgba(0,0,0,.65), 0 0 20px rgba(63,185,80,.10), 0 0 26px rgba(255,94,0,.14);
+    backdrop-filter:blur(4px);
+  }
+  .credit .t1{display:block; font-weight:700; font-size:12px; letter-spacing:.10em; text-transform:uppercase;
+    background:linear-gradient(90deg,#3fb950,#a3e635 45%,#ffb347 72%,#ff5e00);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 6px rgba(255,94,0,.25));}
+  .credit .t2{display:block; color:#c9d1d9;}
+  .credit .t2 b{font-weight:700; background:linear-gradient(90deg,#7ee787,#d4ff8a);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .credit .t3{display:block; font-size:9.5px; color:#8b919e; letter-spacing:.08em;}
+  .credit .t3 em{font-style:normal; font-weight:700;background:linear-gradient(90deg,#ff9a3c,#ff5e00);-webkit-background-clip:text;background-clip:text;color:transparent;}
 
-    h1 {
-      font-size: 2.2rem;
-      margin-bottom: 16px;
-    }
+  .controls{display:flex; flex-direction:column; gap:9px; margin-bottom:16px;}
+  button{
+    font-family:inherit; font-size:13.5px; font-weight:600; letter-spacing:.04em;
+    padding:11px 14px; border-radius:9px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text); cursor:pointer; transition:.18s;
+  }
+  button:hover:not(:disabled){background:#2a3442; border-color:#4c5a6a; transform:translateY(-1px);}
+  button.primary{background:linear-gradient(180deg,#e0b45c,#c1902f); border-color:#a87c2c; color:#241a06;}
+  button.primary:hover:not(:disabled){background:linear-gradient(180deg,#f0c46c,#cf9e3d);}
+  button.edit-active{background:linear-gradient(180deg,#6aa6e0,#3f78b0); border-color:#2c5580; color:#fff;}
+  button:disabled{opacity:.45; cursor:not-allowed;}
+  #btnStopAI{background:linear-gradient(180deg,#e05252,#b03030); border-color:#802020; color:#fff;}
+  #btnStopAI:hover:not(:disabled){background:linear-gradient(180deg,#f06262,#c04040); border-color:#a03030;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:5px;}
+  select{
+    width:100%; font-family:inherit; font-size:13.5px; padding:9px 10px;
+    border-radius:9px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--text); cursor:pointer; outline:none;
+  }
+  select:focus{border-color:var(--gold);}
+  .info{margin-top:16px; padding-top:14px; border-top:1px solid var(--line); font-size:11px; line-height:1.55; color:var(--muted);}
+  .info b{color:#cfc9bd; font-weight:600;}
+  .info .step{color:#7ee787; font-weight:700;}
+  .info .new{color:#d4a0ff;}
+  .info .ai{color:#7ee787; font-weight:700;}
+  .btn-toggle-rules{
+    display:block; width:100%; margin:0 0 10px 0;
+    padding:7px 10px;
+    font-family:inherit; font-size:11px; font-weight:600;
+    letter-spacing:.1em; text-transform:uppercase;
+    background:rgba(120,180,255,.08);
+    border:1px solid rgba(120,180,255,.3);
+    color:#a0c8ff; border-radius:8px;
+    cursor:pointer; transition:.18s;
+  }
+  .btn-toggle-rules:hover{background:rgba(120,180,255,.18); border-color:rgba(120,180,255,.55);}
+  .info.collapsed .info-content{display:none;}
 
-    p {
-      font-size: 1.1rem;
-      line-height: 1.6;
-      opacity: 0.95;
-    }
+  .info.expanded{
+    position:fixed; inset:0; z-index:300;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    margin:0; padding:14px; border-top:none;
+    background:rgba(4,6,10,.78);
+    backdrop-filter:blur(5px);
+    -webkit-backdrop-filter:blur(5px);
+    overflow:hidden;
+    animation:fadeIn .18s ease-out;
+  }
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  .info.expanded .btn-toggle-rules{
+    flex:0 0 auto;
+    width:min(760px,100%);
+    margin:0; padding:11px 14px;
+    font-size:12.5px; letter-spacing:.12em;
+    background:linear-gradient(180deg,#e0b45c,#c1902f);
+    border-color:#a87c2c; color:#241a06;
+    box-shadow:0 10px 30px rgba(0,0,0,.7);
+    transform:none;
+  }
+  .info.expanded .btn-toggle-rules:hover{background:linear-gradient(180deg,#f0c46c,#cf9e3d); border-color:#c1902f;}
+  .info.expanded .info-content{
+    flex:1 1 auto; min-height:0;
+    width:min(760px,100%);
+    display:block;
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    padding:18px 20px;
+    font-size:12.5px; line-height:1.62;
+    background:linear-gradient(180deg,var(--panel),#11141a);
+    border:1px solid var(--line); border-radius:14px;
+    box-shadow:0 24px 70px rgba(0,0,0,.85);
+  }
+  .info.expanded .info-content::-webkit-scrollbar{width:10px;}
+  .info.expanded .info-content::-webkit-scrollbar-track{background:rgba(255,255,255,.04); border-radius:8px;}
+  .info.expanded .info-content::-webkit-scrollbar-thumb{background:rgba(212,168,67,.55); border-radius:8px;}
+  .info.expanded .info-content::-webkit-scrollbar-thumb:hover{background:rgba(212,168,67,.8);}
 
-    .emoji {
-      font-size: 3rem;
-      display: block;
-      margin-bottom: 16px;
+  .legend{margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:10.5px; line-height:1.7;}
+  .legend .lk{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .legend .lk.lk-ring{background:transparent;border:2px dashed rgba(255,140,40,.95);box-sizing:border-box;}
+
+  .board-wrap{display:flex; align-items:center; justify-content:center; flex:1 1 auto; min-width:0;}
+  canvas{border-radius:10px; box-shadow:0 24px 70px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.06); cursor:pointer; touch-action:manipulation; display:block;}
+
+  .edit-panel{
+    margin-top:12px; padding:10px; border-radius:10px;
+    background:rgba(63,136,224,.08); border:1px solid rgba(63,136,224,.3);
+  }
+  .palette{display:grid; grid-template-columns:repeat(4, 1fr); gap:6px;}
+  .palette .tool{
+    padding:8px 2px; font-size:20px; line-height:1; min-height:38px; min-width:0;
+    display:flex; align-items:center; justify-content:center; border-radius:8px;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    cursor:pointer; transition:.15s;
+  }
+  .palette .tool:hover{background:#2a3442; border-color:#4c5a6a;}
+  .palette .tool.active{
+    background:linear-gradient(180deg,#6aa6e0,#3f78b0);
+    border-color:#2c5580; color:#fff;
+    box-shadow:0 0 12px rgba(63,136,224,.5);
+  }
+  .palette .tool[data-tool="empty"]{font-size:16px; color:var(--muted);}
+  .palette .tool[data-tool="gP"], .palette .tool[data-tool="gK"]{color:#a8e090;}
+  .palette .tool[data-tool="wLK"], .palette .tool[data-tool="gLK"]{font-size:13px; letter-spacing:-1px;}
+  .palette .tool[data-tool="wLK"]{color:#e8d8ff;}
+  .palette .tool[data-tool="gLK"]{color:#c8a0ff;}
+  .btn-clear-board{
+    width:100%; margin-top:8px; padding:8px; font-size:12px;
+    background:rgba(224,82,82,.15); border-color:rgba(224,82,82,.4); color:#ffb0b0;
+  }
+  .btn-clear-board:hover{background:rgba(224,82,82,.25);}
+
+  .controls-history {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .controls-history button {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(120, 180, 255, .08);
+    border: 1px solid rgba(120, 180, 255, .3);
+    color: #a0c8ff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: .18s;
+  }
+  .controls-history button:hover:not(:disabled) {
+    background: rgba(120, 180, 255, .18);
+    border-color: rgba(120, 180, 255, .55);
+    transform: none;
+  }
+  .controls-history button:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+  }
+
+  .save-load-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .save-load-grid button {
+    padding: 8px 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: rgba(120, 180, 255, .08);
+    border: 1px solid rgba(120, 180, 255, .3);
+    color: #a0c8ff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: .18s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .save-load-grid button:hover:not(:disabled) {
+    background: rgba(120, 180, 255, .18);
+    border-color: rgba(120, 180, 255, .55);
+    transform: none;
+  }
+  .save-load-grid button:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+  }
+  .save-load-grid button.span-2 {
+    grid-column: span 2;
+    background: rgba(212, 168, 67, .10);
+    border-color: rgba(212, 168, 67, .35);
+    color: #e0c070;
+  }
+  .save-load-grid button.span-2:hover:not(:disabled) {
+    background: rgba(212, 168, 67, .20);
+    border-color: rgba(212, 168, 67, .6);
+  }
+
+  .history-sidebar {
+    width: 280px;
+    flex: 0 0 auto;
+    max-height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .history-panel {
+    background: linear-gradient(180deg, var(--panel), #11141a);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    box-shadow: 0 18px 50px rgba(0,0,0,.65);
+  }
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 13px;
+    background: rgba(120, 180, 255, .06);
+    border-bottom: 1px solid var(--line);
+    font-size: 10.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    flex: 0 0 auto;
+  }
+  .history-header .hcount {
+    color: var(--gold);
+    font-weight: 700;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    background: rgba(212, 168, 67, .12);
+    padding: 1px 7px;
+    border-radius: 8px;
+  }
+
+  .history-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    background: rgba(170, 130, 230, .06);
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+  .history-controls button {
+    flex: 0 0 auto;
+    padding: 4px 7px;
+    min-width: 30px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    background: rgba(170, 130, 230, .10);
+    border: 1px solid rgba(170, 130, 230, .35);
+    color: #d0b8ff;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: .15s;
+    line-height: 1;
+  }
+  .history-controls button:hover:not(:disabled) {
+    background: rgba(170, 130, 230, .24);
+    border-color: rgba(170, 130, 230, .6);
+    transform: none;
+  }
+  .history-controls button:disabled {
+    opacity: .3;
+    cursor: not-allowed;
+  }
+  .history-controls .replay-pos {
+    flex: 1;
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .history-controls .replay-pos.active {
+    color: #d0b8ff;
+    text-shadow: 0 0 8px rgba(170, 130, 230, .5);
+  }
+
+  .history-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 6px 4px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    scroll-behavior: smooth;
+  }
+  .history-list::-webkit-scrollbar { width: 8px; }
+  .history-list::-webkit-scrollbar-track { background: rgba(255,255,255,.03); border-radius: 3px; }
+  .history-list::-webkit-scrollbar-thumb { background: rgba(212,168,67,.4); border-radius: 3px; }
+  .history-list::-webkit-scrollbar-thumb:hover { background: rgba(212,168,67,.6); }
+  .history-entry {
+    display: flex;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    align-items: baseline;
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .history-entry:hover {
+    background: rgba(212, 168, 67, .08);
+  }
+  .history-entry .ply-num {
+    color: var(--muted);
+    font-size: 10px;
+    min-width: 24px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  .history-entry .notation {
+    font-family: 'Consolas', 'SF Mono', Menlo, monospace;
+    letter-spacing: .02em;
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-all;
+  }
+  .history-entry .notation .glyph {
+    font-size: 13px;
+    margin-right: 1px;
+  }
+  .history-entry.p1 .notation { color: #f0e0b0; }
+  .history-entry.p2 .notation { color: #d0d4dc; }
+  .history-entry.p1 .notation .glyph { color: #ffd24a; }
+  .history-entry.p2 .notation .glyph { color: #ff7020; }
+  .history-entry.last {
+    background: rgba(212, 168, 67, .10);
+    box-shadow: 0 0 0 1px rgba(212, 168, 67, .25) inset;
+  }
+  .history-entry.won .notation {
+    color: #ffe9a8 !important;
+    font-weight: 600;
+    text-shadow: 0 0 6px rgba(212, 168, 67, .35);
+  }
+  .history-entry.replay-current {
+    background: rgba(170, 130, 230, .18) !important;
+    box-shadow: 0 0 0 1px rgba(170, 130, 230, .55) inset;
+  }
+  .history-entry.replay-current .notation {
+    color: #e8d8ff !important;
+    font-weight: 600;
+  }
+  .history-empty {
+    padding: 16px 10px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-style: italic;
+  }
+
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    padding: 10px 18px;
+    border-radius: 10px;
+    background: rgba(30, 40, 50, .95);
+    color: #e8e6e1;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0,0,0,.6);
+    border: 1px solid rgba(63, 185, 80, .6);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    backdrop-filter: blur(6px);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.error {
+    border-color: rgba(224, 82, 82, .6);
+    color: #ffb0b0;
+  }
+  .toast.success {
+    color: #7ee787;
+  }
+
+  @media (max-width:1100px){
+    .history-sidebar { width: 240px; }
+  }
+
+  @media (max-width: 960px){
+    .app { flex-wrap: wrap; }
+    .history-sidebar {
+      width: 100%;
+      max-width: 720px;
+      max-height: 220px;
+      order: 3;
     }
-  </style>
+    .panel { order: 1; width: 100%; max-width: 720px; }
+    .board-wrap { order: 2; width: 100%; }
+  }
+
+  @media (max-width:820px){
+    body{padding:10px;}
+    .app{
+      flex-direction:column; align-items:center; gap:14px;
+      margin:0 auto;
+    }
+    .panel{ width:100%; max-width:520px; padding:15px; max-height:none; overflow-y:visible; order:2; }
+    .board-wrap{ order:1; width:100%; }
+    .history-sidebar{ order:3; width:100%; max-width:520px; max-height:240px; }
+    h1{font-size:15px;}
+    .controls{flex-direction:row;}
+    .bottom-stack{ right:8px; bottom:8px; gap:6px; }
+    .counters-card{ padding:6px 9px; font-size:10px; max-width:74vw; gap:3px; }
+    .counters-card .crow{ gap:7px; }
+    .counters-card .cname{ font-size:9.5px; }
+    .counters-card .cstat{ gap:3px; font-size:10px; }
+    .counters-card .cstat .ico{ font-size:11px; }
+    .counters-card .cstat b{ font-size:10.5px; }
+    .credit{ padding:7px 10px; font-size:9px; max-width:74vw; }
+    .credit .t1{font-size:10px;}
+    .credit .t3{font-size:8px;}
+    .info.expanded{padding:8px; gap:6px;}
+    .info.expanded .info-content{padding:14px 14px; font-size:12px; line-height:1.6;}
+    .info.expanded .btn-toggle-rules{padding:10px 12px; font-size:11.5px;}
+  }
+</style>
 </head>
 <body>
-  <main class="contenedor">
-    <span class="emoji">🚧</span>
-    <h1>En construcción</h1>
-    <p>Gracias por su visita.</p>
-    <p>Estamos trabajando para traerte algo genial muy pronto.</p>
+<div class="app">
+  <aside class="panel">
+    <h1>Duelo de Estrellas</h1>
+    <div class="subtitle" id="subtitle">8×8 · 64 casillas · 16 vs 16 (50.0 %)</div>
+    <div class="status" id="status">
+      <span class="dot white" id="statusDot"></span>
+      <span id="statusText">Turno del claro</span>
+    </div>
+
+    <div class="controls">
+      <button class="primary" id="btnNew">Nueva partida</button>
+      <button id="btnEdit">Editar tablero</button>
+      <button id="btnStopAI" disabled>Detener IA</button>
+    </div>
+    <div class="controls-history">
+      <button id="btnUndo" title="Deshacer (Ctrl+Z)" disabled>↶ Deshacer</button>
+      <button id="btnRedo" title="Rehacer (Ctrl+Y)" disabled>↷ Rehacer</button>
+    </div>
+    <div class="save-load-grid">
+      <button id="btnExport" title="Exportar a JSON">⬇ JSON</button>
+      <button id="btnImport" title="Importar desde JSON">⬆ JSON</button>
+      <button class="span-2" id="btnExportPNG" title="Exportar imagen PNG del tablero">🖼 Exportar imagen PNG</button>
+    </div>
+    <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+
+    <div class="field">
+      <label for="selSize">Tablero</label>
+      <select id="selSize">
+        <option value="8" selected>8×8</option>
+        <option value="10">10×10</option>
+        <option value="10x8">10×8</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="selDensity">Densidad</label>
+      <select id="selDensity">
+        <option value="abierta" selected>Abierta (recomendada)</option>
+        <option value="intermedia">Intermedia</option>
+        <option value="densa">Densa (clásica v46, caótica)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="selMode">Modo</label>
+      <select id="selMode">
+        <option value="ai" selected>Contra la IA</option>
+        <option value="pvp">Dos jugadores</option>
+        <option value="aiai">IA contra IA (automático)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="selDiff">Dificultad IA</label>
+      <select id="selDiff">
+        <option value="1">Fácil</option>
+        <option value="2">Medio</option>
+        <option value="3" selected>Difícil</option>
+      </select>
+    </div>
+
+    <div class="edit-panel" id="editPanel" style="display:none;">
+      <div class="field" style="margin-bottom:8px;"><label>Pieza a colocar</label></div>
+      <div class="palette" id="palette">
+        <button class="tool" data-tool="empty" title="Vaciar casilla">✕</button>
+        <button class="tool active" data-tool="wP" title="Estrella fugaz clara">☄</button>
+        <button class="tool" data-tool="wK" title="Estrella errante clara">☆</button>
+        <button class="tool" data-tool="wLK" title="Estrella fija clara (🔒)">☆🔒</button>
+        <button class="tool" data-tool="gP" title="Estrella fugaz oscura">☄</button>
+        <button class="tool" data-tool="gK" title="Estrella errante oscura">★</button>
+        <button class="tool" data-tool="gLK" title="Estrella fija oscura (🔒)">★🔒</button>
+      </div>
+      <button class="btn-clear-board" id="btnClearBoard">Vaciar tablero</button>
+    </div>
+
+    <div class="info collapsed" id="rulesInfo">
+      <button class="btn-toggle-rules" id="btnToggleRules" type="button">Mostrar reglas</button>
+      <div class="info-content">
+        <b><span class="step">v65</span> — Reglas de Duelo de Estrellas</b><br><br>
+
+        <b style="color:#ffb070">⚔️ Obligación de capturar</b><br>
+        • Si en tu turno existe <b>al menos una captura disponible</b>, estás obligado a capturar (no puedes hacer movimientos normales).<br>
+        • Si tras capturar la <b>misma pieza</b> puede seguir capturando, la cadena es <b>obligatoria</b> hasta agotar todas las capturas.<br><br>
+
+        <b style="color:#7ee787">☄ Estrellas fugaces — movimientos</b><br>
+        • <b>Paso diagonal</b>: avanzan 1 casilla en diagonal hacia delante (nunca en línea recta).<br>
+        • <b>Paso vertical simple</b>: avanzan 1 casilla en línea recta hacia delante si la casilla está vacía. No captura.<br>
+        • <b>Salto sobre rival</b>: si hay una pieza rival justo delante en vertical y la casilla 2 pasos más allá está vacía, saltan sobre ella y aterrizan detrás (la pieza saltada <b>no</b> se captura). No pueden saltar sobre estrellas.<br>
+        • <b>Salto sobre propio</b>: si hay una estrella fugaz propia justo delante en vertical, pueden saltarla y aterrizar 2 pasos más allá; la estrella fugaz saltada <b>retrocede en diagonal</b> a una casilla libre (a elegir si hay dos). No pueden saltar sobre estrellas.<br>
+        • <b>Restricción de columnas extremas</b>: las estrellas fugaces <b>no pueden moverse (paso o salto) a la columna a ni a la última columna</b> (h en 8×8; j en 10×10 y 10×8). Excepción: las <b>casillas de inicio</b> (las filas iniciales en esas columnas, p. ej. a1, a2, h1, h2, a7, a8, h7, h8 en 8×8). Solo pueden entrar en esas columnas mediante <b>capturas</b>.<br><br>
+
+        <b style="color:#7ee787">☄ Estrellas fugaces — capturas</b><br>
+        • <b>Captura diagonal</b>: saltan sobre una pieza rival adyacente en diagonal y aterrizan 2 pasos en diagonal, en casilla vacía. Las 4 diagonales están permitidas (incluidas hacia atrás).<br>
+        • Pueden capturar <b>estrellas fugaces y estrellas errantes</b>. A una <b>estrella solo si está flanqueada</b>: debe tener al menos 2 estrellas fugaces del mismo jugador en sus 8 casillas adyacentes (incluyendo el que captura).<br>
+        • <b>No pueden capturar estrellas fijas</b> (🔒) de ninguna forma.<br>
+        • <b>Salto ortogonal sobre estrella flanqueada</b>: si una estrella enemiga está <b>flanqueada</b> (≥2 estrellas fugaces del mismo jugador en sus 8 casillas adyacentes), una estrella fugaz <b>ortogonalmente adyacente</b> puede saltarla en línea recta y aterrizar 2 casillas más allá, en casilla vacía. Captura a la estrella. <b>No encadena</b> (termina el turno). <b>No aplica a estrellas fijas</b> (🔒).<br>
+        • <b>Ortogonales de estrella fugaz</b>: tras una <b>captura diagonal hacia atrás</b> en la cadena, la estrella fugaz puede además capturar en las 4 direcciones <b>ortogonales</b> durante el resto de la cadena.<br><br>
+
+        <b style="color:#7ee787">☄ Estrellas fugaces — coronación</b><br>
+        • <b>Captura a columna extrema</b>: al capturar y aterrizar en una casilla de la columna a o la última columna (h en 8×8; j en 10×10 y 10×8):<br>
+        &nbsp;&nbsp;– <b>1 captura en la cadena</b> → <b>Estrella Fija (🔒)</b>: no se mueve, ni captura, ni puede ser capturada.<br>
+        &nbsp;&nbsp;– <b>2 o más capturas en la cadena</b> → <b>Estrella Errante</b>; termina el turno.<br>
+        • <b>Fila de coronación normal</b> (claro: fila de arriba; oscuro: fila de abajo):<br>
+        &nbsp;&nbsp;– Por <b>captura</b> → siempre corona <b>Estrella Errante</b>.<br>
+        &nbsp;&nbsp;– Por <b>movimiento</b> → corona <b>solo si NO queda entre dos estrellas fugaces rivales</b>.<br>
+        • <b>Retorno victorioso</b>: si una estrella fugaz (sin coronar) encadena <b>≥2 capturas</b> y aterriza en <b>tu primera fila</b>, se corona como <b>Estrella Errante</b> y <b>ganas el juego</b>.<br>
+        • Esta victoria <b>tiene prioridad</b> sobre la <b>Estrella Fija</b> por columna extrema: si aterrizas con 2+ capturas en tu primera fila y en columna extrema, ganas (no se te corona como Estrella Fija).<br><br>
+
+        <b style="color:#a0c8ff">★ Estrellas errantes — movimientos</b><br>
+        • Se mueven <b>1 casilla en las 8 direcciones</b> a casilla vacía (sin restricción de columnas).<br>
+        • <b>No pueden dejar a una estrella fugaz rival sin movimientos normales</b> mediante <b>movimientos normales</b> (sin capturar). Los <b>saltos y capturas no cuentan</b> como movimientos normales para esta regla.<br>
+        • <b>Las capturas de estrellas errantes SIEMPRE son legales</b>, incluso si tras la captura alguna estrella fugaz rival queda <b>sin movimientos normales</b>.<br><br>
+
+        <b style="color:#a0c8ff">★ Estrellas errantes — capturas</b><br>
+        • Capturan en las <b>8 direcciones</b>: saltan sobre una pieza rival adyacente y aterrizan 2 casillas más allá, en casilla vacía.<br>
+        • No pueden capturar <b>estrellas fijas</b> (🔒).<br>
+        • Si tras capturar siguen teniendo capturas, la <b>cadena es obligatoria</b>.<br><br>
+
+        <b style="color:#a0c8ff">★ Estrellas errantes — restricciones</b><br>
+        • <b>Límite de 2 turnos consecutivos de estrella</b>: si un jugador mueve una estrella sin capturar 2 turnos seguidos, en el tercero <b>no podrá mover estrellas</b>.<br>
+        • <b>Exención</b>: si no tienes estrellas fugaces y el rival sí, tus estrellas quedan <b>libres</b> del límite.<br>
+        • Las <b>estrellas fijas</b> (🔒) no se mueven, ni capturan, ni pueden ser capturadas.<br><br>
+
+        <b style="color:#f0d9a8">🏆 Formas de victoria</b><br>
+        • <b>Retorno victorioso</b>: estrella fugaz con ≥2 capturas en cadena que aterriza en tu primera fila → Estrella Errante y victoria.<br>
+        • <b>Dominación</b>: 3 o más estrellas errantes de ventaja en cualquier momento.<br>
+        • <b>Rival sin movimientos</b>: si al rival le toca y no tiene jugadas legales, pierde.<br>
+        • <b>Sin estrellas fugaces</b>: gana quien tenga más estrellas errantes; si empatan, quien haya coronado primero.<br>
+        • <b>Tablas</b>: sin estrellas fugaces, estrellas errantes iguales y sin coronación previa: Esto es teoría en la práctica es imposible con las reglas existentes
+      </div>
+    </div>
+
+    <div class="info collapsed" id="extraInfo">
+      <button class="btn-toggle-rules" id="btnToggleExtra" type="button">Mostrar detalles</button>
+      <div class="info-content">
+        <b style="color:#cfc9bd">⚙️ Otros</b><br>
+        • <b>Tableros</b>: 8×8, 10×10 y 10×8 (10 columnas × 8 filas).<br>
+        • <b>Densidad</b>: Abierta, Intermedia y Densa. Se aplican igual en los tres tableros.<br>
+        • <b>Modos</b>: Contra la IA, Dos jugadores, IA contra IA (automático).<br>
+        • <b>Editar tablero</b>: coloca/quita piezas y reanuda la partida.<br>
+        • <b>Columnas extremas</b>: primera y última columna bloqueadas para el movimiento normal de estrellas fugaces; solo accesibles por captura (o si son casillas de inicio).<br>
+        • <b>v65</b> — <b>Animaciones</b>: interpolación de piezas, destellos al capturar, pulso de cadena, explosión al coronar, confeti al ganar. <b>IA mejorada</b>: valora correctamente las estrellas fugaces en función de la fase de la partida (más valiosas en el final) y penaliza fuertemente sacrificarlas sin compensación. Deshacer/Rehacer (Ctrl+Z / Ctrl+Y), Historial con replay, Exportar/Importar JSON + Exportar PNG.<br>
+        • <b>Atajos</b>: Ctrl+Z deshacer, Ctrl+Y / Ctrl+Shift+Z rehacer, Ctrl+← / Ctrl+→ replay, Esc cerrar paneles.
+
+        <div class="legend">
+          <b style="display:block;margin-bottom:6px;color:#cfc9bd">Leyenda de marcadores</b>
+
+          <span class="lk" style="background:rgba(60,180,120,.65)"></span>Movimiento normal (diagonal / paso vertical / paso estrella)<br>
+          <span class="lk" style="background:rgba(150,100,255,.85)"></span>Salto sobre rival<br>
+          <span class="lk" style="background:rgba(255,160,50,.85)"></span>Salto sobre propio<br>
+          <span class="lk" style="background:rgba(224,82,82,.9)"></span>Captura diagonal<br>
+          <span class="lk" style="background:rgba(255,120,40,.95)"></span>Captura ortogonal (sólo tras diagonal atrás en cadena)<br>
+          <span class="lk" style="background:rgba(255,80,200,.95)"></span>Salto ortogonal sobre estrella flanqueada<br>
+          <span class="lk" style="background:rgba(212,168,67,.7)"></span>Última jugada (origen y destino)<br>
+          <span class="lk" style="background:rgba(255,209,102,.7)"></span>Pieza seleccionada<br>
+          <span class="lk" style="background:rgba(255,120,120,.7)"></span>Cadena de captura activa<br>
+          <span class="lk" style="background:rgba(176,136,255,.9)"></span>Estrella fija (🔒 borde) — invulnerable<br>
+          <span class="lk lk-ring"></span>Estrella sin movimientos (límite 2, anillo discontinuo)
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="board-wrap">
+    <canvas id="board"></canvas>
   </main>
+
+  <aside class="history-sidebar" aria-label="Historial de jugadas">
+    <div class="history-panel">
+      <div class="history-header">
+        <span>Historial</span>
+        <span class="hcount" id="historyCount">0</span>
+      </div>
+      <div class="history-controls" id="historyControls">
+        <button id="btnReplayFirst" title="Inicio" disabled>⏮</button>
+        <button id="btnReplayPrev"  title="Anterior (Ctrl+←)" disabled>◀</button>
+        <span class="replay-pos" id="replayPos">live</span>
+        <button id="btnReplayNext"  title="Siguiente (Ctrl+→)" disabled>▶</button>
+        <button id="btnReplayLast"  title="Volver al presente" disabled>⏭</button>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">Sin jugadas todavía</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="bottom-stack" aria-hidden="true">
+  <div class="counters-card" id="countersCard" title="Recuento de piezas por bando">
+    <div class="crow">
+      <span class="cname">Claro---></span>
+      <span class="cstat fugaces" title="Estrellas fugaces (peones)">
+        <span class="ico fugaz-w">☄ </span> <b id="fugacesWhite">13</b>
+      </span>
+      <span class="cstat errant" title="Estrellas errantes">
+        <span class="ico">☆</span> <b id="errantWhite">0</b>
+      </span>
+      <span class="cstat fixed" title="Estrellas fijas (🔒)">
+        <span class="ico">🔒 </span> <b id="fixedWhite">0</b>
+      </span>
+      <span class="cstat streak" id="streakWhite" title="Turnos de estrella consecutivos" style="display:none;">
+        <span class="ico">⏸ </span> <b id="streakValWhite">0</b>
+      </span>
+    </div>
+    <div class="crow">
+      <span class="cname">Oscuro-></span>
+      <span class="cstat fugaces" title="Estrellas fugaces (peones)">
+        <span class="ico fugaz-g">☄ </span> <b id="fugacesGreen">13</b>
+      </span>
+      <span class="cstat errant" title="Estrellas errantes">
+        <span class="ico">★ </span> <b id="errantGreen">0</b>
+      </span>
+      <span class="cstat fixed" title="Estrellas fijas (🔒)">
+        <span class="ico">🔒 </span> <b id="fixedGreen">0</b>
+      </span>
+      <span class="cstat streak" id="streakGreen" title="Turnos de estrella consecutivos" style="display:none;">
+        <span class="ico">⏸</span> <b id="streakValGreen">0</b>
+      </span>
+    </div>
+  </div>
+  <div class="credit">
+    <span class="t1">Duelo de Estrellas</span>
+    <span class="t2">Creado por: <b>Ernesto Sánchez Fernández</b></span>
+    <span class="t3">Código HTML creado por <em>IA</em></span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DUELO DE ESTRELLAS — v65 · tableros 8×8, 10×10 y 10×8
+// IA mejorada: valora correctamente las estrellas fugaces en función
+// de la fase de la partida y penaliza sacrificios sin compensación.
+// ============================================================
+let ROWS = 8;
+let COLS = 8;
+const P1 = 1, P2 = 2;
+
+let rowsPerSide = 2;
+
+let board = [];
+let turn = P1;
+let selected = null;
+let legalMoves = [];
+let pendingOwnJump = null;
+let chainActive = false;
+let chainFirstWasForward = null;
+let chainHasBackwardDiag = false;
+let chainOrthoDone = false;
+let chainCaptureCount = 0;
+
+let gameOver = false;
+let winner = null;
+let winReason = null;
+
+let kingMoveStreak = { [P1]: 0, [P2]: 0 };
+let firstNormalCoronationPlayer = null;
+
+let turnWasKingMove = false;
+let turnWasCapture = false;
+
+let editMode = false;
+let editTool = 'wP';
+
+let mode = 'ai';
+let aiPlayer = P2;
+let difficulty = 3;
+let density = 'abierta';
+let aiThinking = false;
+
+const pieceTheme = 'marmol';
+
+let aiWorker = null;
+let aiWorkerBroken = false;
+let aiStopRequested = false;
+let aiTurnId = 0;
+let activeTurnId = 0;
+let currentAIPlayer = null;
+
+const PIECE_THEMES = {
+  marmol: {
+    P1: { g0:'#ffffff', g1:'#e0e0e0', g2:'#909090', stroke:'#404040', inner:'rgba(64,64,64,.55)',   shine:'rgba(255,255,255,.80)' },
+    P2: { g0:'#808080', g1:'#404040', g2:'#0a0a0a', stroke:'#000000', inner:'rgba(20,20,20,.55)',   shine:'rgba(200,200,200,.40)' }
+  }
+};
+
+let lastMoveStart = null;
+let lastMoveEnd = null;
+
+// ── undo/redo e historial ──
+let undoStack = [];
+let redoStack = [];
+let turnStartSnapshot = null;
+let moveHistory = [];
+let pendingTurnSteps = [];
+let _historyVersion = 0;
+
+// ── REPLAY ──
+let replaySnapshots = [];
+let replayIndex = 0;
+let replayActive = false;
+let initialBoardForReplay = null;
+
+// ═══════════════════════════════════════════════════════════
+// ANIMACIONES — estado global
+// ═══════════════════════════════════════════════════════════
+const ANIM_MOVE_DURATION = 210;
+const ANIM_CAPTURE_DURATION = 380;
+const ANIM_BURST_DURATION = 900;
+
+const animState = {
+  fading: [],
+  bursts: [],
+  confetti: [],
+  victoryTime: null
+};
+let animRunning = false;
+let animFrameId = null;
+
+function clearAnimations() {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (p && p._anim) delete p._anim;
+  }
+  animState.fading = [];
+  animState.bursts = [];
+  animState.confetti = [];
+  animState.victoryTime = null;
+  if (animFrameId) {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
+  }
+  animRunning = false;
+}
+
+function registerMoveAnim(piece, fromR, fromC, toR, toC) {
+  if (!piece) return;
+  piece._anim = {
+    fromR, fromC,
+    start: performance.now(),
+    dur: ANIM_MOVE_DURATION
+  };
+  startAnimationLoop();
+}
+
+function registerCaptureFlash(r, c, piece) {
+  if (!piece) return;
+  animState.fading.push({
+    piece,
+    r, c,
+    start: performance.now(),
+    dur: ANIM_CAPTURE_DURATION
+  });
+  startAnimationLoop();
+}
+
+function registerCoronationBurst(r, c) {
+  const particles = [];
+  const count = 22;
+  const cx = c * cellSize + cellSize / 2;
+  const cy = r * cellSize + cellSize / 2;
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+    const speed = 0.7 + Math.random() * 1.3;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed * cellSize * 0.06,
+      vy: Math.sin(angle) * speed * cellSize * 0.06,
+      size: cellSize * (0.06 + Math.random() * 0.08),
+      color: Math.random() < 0.55 ? '#ffe9a8' : (Math.random() < 0.5 ? '#d4a843' : '#fff5cc'),
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.25,
+      shape: Math.random() < 0.5 ? 'star' : 'circle'
+    });
+  }
+  animState.bursts.push({
+    particles,
+    start: performance.now(),
+    dur: ANIM_BURST_DURATION
+  });
+  startAnimationLoop();
+}
+
+function spawnConfetti() {
+  const colors = ['#ffe9a8', '#d4a843', '#7ee787', '#a3e635', '#ffb347', '#ff5e00', '#d0b8ff', '#ff7090', '#6aa6e0', '#f0d9a8'];
+  const n = 180;
+  for (let i = 0; i < n; i++) {
+    animState.confetti.push({
+      x: Math.random() * px,
+      y: -20 - Math.random() * (py * 0.8),
+      vx: (Math.random() - 0.5) * 3,
+      vy: 1.8 + Math.random() * 3,
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.25,
+      size: cellSize * (0.10 + Math.random() * 0.14),
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 1,
+      shape: Math.random() < 0.55 ? 'rect' : 'circle'
+    });
+  }
+  startAnimationLoop();
+}
+
+function triggerVictory() {
+  if (animState.victoryTime) return;
+  animState.victoryTime = performance.now();
+  spawnConfetti();
+  startAnimationLoop();
+}
+
+function needsAnimation() {
+  if (replayActive) return false;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (p && p._anim) return true;
+  }
+  if (animState.fading.length > 0) return true;
+  if (animState.bursts.length > 0) return true;
+  if (animState.confetti.length > 0) return true;
+  if (chainActive) return true;
+  if (pendingOwnJump) return true;
+  return false;
+}
+
+function startAnimationLoop() {
+  if (animRunning) return;
+  animRunning = true;
+  animFrameId = requestAnimationFrame(animTick);
+}
+
+function animTick(now) {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (p && p._anim && now - p._anim.start >= p._anim.dur) {
+      delete p._anim;
+    }
+  }
+  if (animState.fading.length) animState.fading = animState.fading.filter(f => now - f.start < f.dur);
+  if (animState.bursts.length) animState.bursts = animState.bursts.filter(b => now - b.start < b.dur);
+
+  if (animState.confetti.length) {
+    for (const c of animState.confetti) {
+      c.x += c.vx;
+      c.y += c.vy;
+      c.vy += 0.06;
+      c.vx *= 0.995;
+      c.rot += c.vr;
+      c.life -= 0.0035;
+    }
+    animState.confetti = animState.confetti.filter(c => c.life > 0 && c.y < py + 80);
+  }
+
+  draw();
+
+  if (needsAnimation()) {
+    animFrameId = requestAnimationFrame(animTick);
+  } else {
+    animRunning = false;
+    animFrameId = null;
+  }
+}
+
+// ── Configuración de densidad ──
+function rowsPerSideFor(rows, dens) {
+  if (dens === 'densa')      return rows <= 8 ? 3 : 4;
+  if (dens === 'intermedia') return rows <= 8 ? 3 : 4;
+  return rows <= 8 ? 2 : 3;
+}
+
+function initialPiecesPerSide(rows, cols, dens) {
+  const r = rowsPerSideFor(rows, dens);
+  if (dens === 'intermedia') return (r - 1) * cols + Math.floor(cols / 2);
+  return r * cols;
+}
+
+function isChainOrthoEnabled() { return chainHasBackwardDiag === true; }
+function inBounds(r, c) { return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
+
+function isStartingSquare(r, c) {
+  if (c !== 0 && c !== COLS - 1) return false;
+  return r < rowsPerSide || r >= ROWS - rowsPerSide;
+}
+function isColumnRestricted(r, c) {
+  if (c !== 0 && c !== COLS - 1) return false;
+  return !isStartingSquare(r, c);
+}
+function isAIPlayer(player) {
+  if (mode === 'ai') return player === aiPlayer;
+  if (mode === 'aiai') return true;
+  return false;
+}
+function playerLabel(player) {
+  if (mode === 'aiai') return player === P1 ? 'claro (IA)' : 'oscuro (IA)';
+  if (mode === 'ai') return player === P1 ? 'claro' : 'oscuro (IA)';
+  return player === P1 ? 'claro' : 'oscuro';
+}
+function hasAnyPawnsOnBoard() {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (p && !p.k) return true;
+  }
+  return false;
+}
+function playerHasPawns(player) {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && !p.k) return true;
+  }
+  return false;
+}
+function isKingLimitExempt(player) {
+  const opponent = player === P1 ? P2 : P1;
+  return !playerHasPawns(player) && playerHasPawns(opponent);
+}
+function isCorner(r, c) {
+  return (r === 0 || r === ROWS - 1) && (c === 0 || c === COLS - 1);
+}
+
+function initBoard() {
+  rowsPerSide = rowsPerSideFor(ROWS, density);
+  const partialMiddle = (density === 'intermedia');
+  board = [];
+  for (let r = 0; r < ROWS; r++) {
+    const row = [];
+    for (let c = 0; c < COLS; c++) {
+      let piece = null;
+      if (r < rowsPerSide) piece = { p: P2, k: false };
+      else if (r >= ROWS - rowsPerSide) piece = { p: P1, k: false };
+      if (piece && partialMiddle) {
+        const isLastRowP2 = (r === rowsPerSide - 1);
+        const isFirstRowP1 = (r === ROWS - rowsPerSide);
+        if ((isLastRowP2 || isFirstRowP1) && (c % 2 === 1)) piece = null;
+      }
+      row.push(piece);
+    }
+    board.push(row);
+  }
+  resetGameState();
+  initialBoardForReplay = board.map(row => row.map(p => p ? { ...p } : null));
+  replayActive = false;
+  replayIndex = 0;
+  rebuildReplaySnapshots();
+}
+
+function resetGameState() {
+  turn = P1;
+  selected = null; legalMoves = []; pendingOwnJump = null;
+  chainActive = false;
+  chainFirstWasForward = null;
+  chainHasBackwardDiag = false;
+  chainOrthoDone = false;
+  chainCaptureCount = 0;
+  gameOver = false; winner = null; winReason = null;
+  kingMoveStreak = { [P1]: 0, [P2]: 0 };
+  firstNormalCoronationPlayer = null;
+  turnWasKingMove = false;
+  turnWasCapture = false;
+  aiThinking = false;
+  aiStopRequested = false;
+  activeTurnId = 0;
+  if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+  lastMoveStart = null;
+  lastMoveEnd = null;
+  undoStack = [];
+  redoStack = [];
+  turnStartSnapshot = null;
+  moveHistory = [];
+  pendingTurnSteps = [];
+  _historyVersion++;
+  clearAnimations();
+}
+
+function countPieces(boardToCount = board) {
+  let w = 0, g = 0, kw = 0, kg = 0, lw = 0, lg = 0, pawns = 0;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = boardToCount[r][c];
+    if (!p) continue;
+    if (p.p === P1) { w++; if (p.k) { kw++; if (p.locked) lw++; } }
+    else { g++; if (p.k) { kg++; if (p.locked) lg++; } }
+    if (!p.k) pawns++;
+  }
+  return { w, g, kw, kg, lw, lg, pawns };
+}
+function countKings(player) {
+  let n = 0;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && p.k) n++;
+  }
+  return n;
+}
+
+function checkKingDomination() {
+  if (gameOver) return false;
+  const k1 = countKings(P1), k2 = countKings(P2);
+  if (k1 - k2 >= 3) { gameOver = true; winner = P1; winReason = 'domination'; chainActive = false; selected = null; legalMoves = []; pendingOwnJump = null; return true; }
+  if (k2 - k1 >= 3) { gameOver = true; winner = P2; winReason = 'domination'; chainActive = false; selected = null; legalMoves = []; pendingOwnJump = null; return true; }
+  return false;
+}
+function checkNoPawns() {
+  if (gameOver) return false;
+  const { pawns } = countPieces();
+  if (pawns > 0) return false;
+  const k1 = countKings(P1), k2 = countKings(P2);
+  if (k1 > k2) { gameOver = true; winner = P1; winReason = 'noPawns'; return true; }
+  if (k2 > k1) { gameOver = true; winner = P2; winReason = 'noPawns'; return true; }
+  if (firstNormalCoronationPlayer !== null) {
+    gameOver = true; winner = firstNormalCoronationPlayer; winReason = 'noPawnsFirstCoronation'; return true;
+  }
+  gameOver = true; winner = null; winReason = 'noPawnsDraw'; return true;
+}
+function isBetweenTwoEnemyPawns(r, c, player) {
+  const enemy = player === P1 ? P2 : P1;
+  if (c - 1 < 0 || c + 1 >= COLS) return false;
+  const left = board[r][c - 1], right = board[r][c + 1];
+  const isEnemyPawn = (x) => x && x.p === enemy && !x.k;
+  return isEnemyPawn(left) && isEnemyPawn(right);
+}
+function shouldCrown(piece, r, c, chainCount) {
+  if (!piece || piece.k) return false;
+  const promoRow = piece.p === P1 ? 0 : ROWS - 1;
+  const isPromo = r === promoRow;
+  const isEdgeCol = (c === 0 || c === COLS - 1);
+  if (isEdgeCol && chainCount > 0) return true;
+  if (isPromo) {
+    if (chainCount > 0) return true;
+    if (isBetweenTwoEnemyPawns(r, c, piece.p)) return false;
+    return true;
+  }
+  return false;
+}
+function crownAt(piece, r, c, chainCount) {
+  piece.k = true;
+  const isEdgeCol = (c === 0 || c === COLS - 1);
+  const isFija = isEdgeCol && chainCount === 1;
+  if (isFija) piece.locked = true;
+  if (!isFija && firstNormalCoronationPlayer === null) firstNormalCoronationPlayer = piece.p;
+}
+function canPawnCaptureKing(pawnPlayer, kingR, kingC) {
+  let count = 0;
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    if (dr === 0 && dc === 0) continue;
+    const nr = kingR + dr, nc = kingC + dc;
+    if (!inBounds(nr, nc)) continue;
+    const p = board[nr][nc];
+    if (p && p.p === pawnPlayer && !p.k) count++;
+  }
+  return count >= 2;
+}
+function getPawnMovesForBlocking(r, c, piece) {
+  if (!piece || piece.k) return [];
+  const moves = [];
+  const forward = piece.p === P1 ? -1 : 1;
+  const promoRow = piece.p === P1 ? 0 : ROWS - 1;
+  {
+    const nr = r + forward, nc = c;
+    if (inBounds(nr, nc) && !board[nr][nc] && !isColumnRestricted(nr, nc)) {
+      if (!(nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, piece.p))) moves.push({ r: nr, c: nc });
+    }
+  }
+  for (const dc of [-1, 1]) {
+    const nr = r + forward, nc = c + dc;
+    if (inBounds(nr, nc) && !board[nr][nc] && !isColumnRestricted(nr, nc)) {
+      if (nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, piece.p)) continue;
+      moves.push({ r: nr, c: nc });
+    }
+  }
+  return moves;
+}
+function kingMoveWouldBlockAnyPawn(player, fromR, fromC, toR, toC) {
+  const opponent = player === P1 ? P2 : P1;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const pawn = board[r][c];
+    if (!pawn || pawn.p !== opponent || pawn.k || pawn.locked) continue;
+    if (Math.abs(toR - r) > 4 || Math.abs(toC - c) > 4) continue;
+    const before = getPawnMovesForBlocking(r, c, pawn).length;
+    if (before === 0) continue;
+    const moving = board[fromR][fromC];
+    const target = board[toR][toC];
+    board[fromR][fromC] = null;
+    board[toR][toC] = moving;
+    const afterPawn = board[r][c];
+    const after = afterPawn ? getPawnMovesForBlocking(r, c, afterPawn).length : 0;
+    board[fromR][fromC] = moving;
+    board[toR][toC] = target;
+    if (after === 0) return true;
+  }
+  return false;
+}
+function getCapturesFrom(r, c, includeOrtho = false, isChainContinuation = false) {
+  const piece = board[r][c];
+  if (!piece) return [];
+  if (piece.locked) return [];
+  const captures = [];
+  if (piece.k) {
+    for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+      const midR = r + dr, midC = c + dc;
+      const landR = r + 2*dr, landC = c + 2*dc;
+      if (!inBounds(landR, landC)) continue;
+      const mid = board[midR][midC];
+      if (!mid || mid.p === piece.p) continue;
+      if (mid.locked) continue;
+      if (board[landR][landC]) continue;
+      captures.push({ from: {r, c}, to: {r: landR, c: landC}, captured: {r: midR, c: midC}, type: 'capture', ortho: (dr === 0 || dc === 0) });
+    }
+    return captures;
+  }
+  for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+    const midR = r + dr, midC = c + dc;
+    const landR = r + 2*dr, landC = c + 2*dc;
+    if (!inBounds(landR, landC)) continue;
+    const mid = board[midR][midC];
+    if (!mid || mid.p === piece.p) continue;
+    if (mid.locked) continue;
+    if (board[landR][landC]) continue;
+    if (mid.k && !canPawnCaptureKing(piece.p, midR, midC)) continue;
+    captures.push({ from: {r, c}, to: {r: landR, c: landC}, captured: {r: midR, c: midC}, type: 'capture' });
+  }
+  if (includeOrtho) {
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const midR = r + dr, midC = c + dc;
+      const landR = r + 2*dr, landC = c + 2*dc;
+      if (!inBounds(landR, landC)) continue;
+      const mid = board[midR][midC];
+      if (!mid || mid.p === piece.p) continue;
+      if (mid.locked) continue;
+      if (board[landR][landC]) continue;
+      if (mid.k && !canPawnCaptureKing(piece.p, midR, midC)) continue;
+      captures.push({ from: {r, c}, to: {r: landR, c: landC}, captured: {r: midR, c: midC}, type: 'capture', ortho: true });
+    }
+  }
+  if (!isChainContinuation) {
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const midR = r + dr, midC = c + dc;
+      const landR = r + 2*dr, landC = c + 2*dc;
+      if (!inBounds(landR, landC)) continue;
+      const mid = board[midR][midC];
+      if (!mid || mid.p === piece.p) continue;
+      if (!mid.k) continue;
+      if (mid.locked) continue;
+      if (board[landR][landC]) continue;
+      if (!canPawnCaptureKing(piece.p, midR, midC)) continue;
+      captures.push({ from: {r, c}, to: {r: landR, c: landC}, captured: {r: midR, c: midC}, type: 'capture', kingOrtho: true });
+    }
+  }
+  return captures;
+}
+function playerHasCaptures(player) {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && !p.locked && getCapturesFrom(r, c, false).length > 0) return true;
+  }
+  return false;
+}
+
+function getPieceMoves(r, c) {
+  const piece = board[r][c];
+  if (!piece) return [];
+  if (piece.locked) return [];
+  if (playerHasCaptures(piece.p)) return getCapturesFrom(r, c, false);
+  if (piece.k) {
+    if (kingMoveStreak[piece.p] >= 2 && !isKingLimitExempt(piece.p)) return [];
+    const moves = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr, nc = c + dc;
+      if (inBounds(nr, nc) && !board[nr][nc]) {
+        if (kingMoveWouldBlockAnyPawn(piece.p, r, c, nr, nc)) continue;
+        moves.push({ from: {r, c}, to: {r: nr, c: nc}, type: 'king-step' });
+      }
+    }
+    return moves;
+  }
+  const forward = piece.p === P1 ? -1 : 1;
+  const promoRow = piece.p === P1 ? 0 : ROWS - 1;
+  const moves = [];
+  {
+    const nr = r + forward, nc = c;
+    if (inBounds(nr, nc) && !board[nr][nc] && !isColumnRestricted(nr, nc)) {
+      if (!(nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, piece.p))) {
+        moves.push({ from: {r, c}, to: {r: nr, c: nc}, type: 'step' });
+      }
+    }
+  }
+  for (const dc of [-1, 1]) {
+    const nr = r + forward, nc = c + dc;
+    if (inBounds(nr, nc) && !board[nr][nc] && !isColumnRestricted(nr, nc)) {
+      if (nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, piece.p)) continue;
+      moves.push({ from: {r, c}, to: {r: nr, c: nc}, type: 'diag' });
+    }
+  }
+  const midR = r + forward, midC = c;
+  const landR = r + forward * 2, landC = c;
+  if (inBounds(midR, midC) && board[midR][midC] &&
+      inBounds(landR, landC) && !board[landR][landC] && !isColumnRestricted(landR, landC)) {
+    const jumped = board[midR][midC];
+    if (!jumped.k && jumped.p !== piece.p) {
+      if (landR !== promoRow) moves.push({ from: {r, c}, to: {r: landR, c: landC}, jumpOver: {r: midR, c: midC}, type: 'jumpOpponent' });
+    } else if (!jumped.k && jumped.p === piece.p) {
+      if (landR !== promoRow) {
+        const backRow = midR - forward;
+        const retreatOptions = [
+          { r: backRow, c: midC - 1 },
+          { r: backRow, c: midC + 1 }
+        ].filter(o => inBounds(o.r, o.c) && !board[o.r][o.c] && !isColumnRestricted(o.r, o.c));
+        if (retreatOptions.length > 0) moves.push({ from: {r, c}, to: {r: landR, c: landC}, jumpOver: {r: midR, c: midC}, type: 'jumpOwn', retreatOptions });
+      }
+    }
+  }
+  return moves;
+}
+function hasAnyMoves(player) {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && getPieceMoves(r, c).length > 0) return true;
+  }
+  return false;
+}
+function updateChainFlags(move, piece) {
+  if (piece.k) return;
+  const dr = move.to.r - move.from.r;
+  const dc = move.to.c - move.from.c;
+  const isDiag = Math.abs(dr) === 2 && Math.abs(dc) === 2;
+  if (!isDiag) return;
+  const forward = piece.p === P1 ? -1 : 1;
+  const isFwd = dr === forward * 2;
+  const isBwd = dr === -forward * 2;
+  if (!chainActive) {
+    if (isFwd) chainFirstWasForward = true;
+    else if (isBwd) chainFirstWasForward = false;
+  }
+  if (isBwd) chainHasBackwardDiag = true;
+}
+
+// ── Snapshots (undo/redo) ──
+function takeSnapshot() {
+  return {
+    board: board.map(row => row.map(p => p ? { p: p.p, k: p.k, locked: !!p.locked } : null)),
+    turn,
+    kingMoveStreak: { ...kingMoveStreak },
+    firstNormalCoronationPlayer,
+    lastMoveStart: lastMoveStart ? { ...lastMoveStart } : null,
+    lastMoveEnd: lastMoveEnd ? { ...lastMoveEnd } : null,
+    gameOver, winner, winReason,
+    turnWasKingMove, turnWasCapture, chainCaptureCount,
+    moveHistory: moveHistory.slice()
+  };
+}
+function restoreSnapshot(snapshot) {
+  board = snapshot.board.map(row => row.map(p => p ? { ...p } : null));
+  turn = snapshot.turn;
+  kingMoveStreak = { ...snapshot.kingMoveStreak };
+  firstNormalCoronationPlayer = snapshot.firstNormalCoronationPlayer;
+  lastMoveStart = snapshot.lastMoveStart ? { ...snapshot.lastMoveStart } : null;
+  lastMoveEnd = snapshot.lastMoveEnd ? { ...snapshot.lastMoveEnd } : null;
+  gameOver = snapshot.gameOver;
+  winner = snapshot.winner;
+  winReason = snapshot.winReason;
+  turnWasKingMove = snapshot.turnWasKingMove;
+  turnWasCapture = snapshot.turnWasCapture;
+  chainCaptureCount = snapshot.chainCaptureCount;
+  selected = null;
+  legalMoves = [];
+  pendingOwnJump = null;
+  chainActive = false;
+  chainFirstWasForward = null;
+  chainHasBackwardDiag = false;
+  chainOrthoDone = false;
+  pendingTurnSteps = [];
+  turnStartSnapshot = null;
+  moveHistory = snapshot.moveHistory.map(e => ({ ...e, steps: e.steps.slice() }));
+  _historyVersion++;
+  replayActive = false;
+  replayIndex = moveHistory.length;
+  rebuildReplaySnapshots();
+  clearAnimations();
+}
+
+// ── Notación e historial ──
+function sqName(sq) { return String.fromCharCode(97 + sq.c) + (ROWS - sq.r); }
+function buildNotation(steps, finalPiece) {
+  if (steps.length === 0) return '';
+  const firstStep = steps[0];
+  const player = firstStep.player;
+  const wasKing = firstStep.wasKing;
+  const glyph = wasKing ? (player === P1 ? '☆' : '★') : '☄';
+  let notation = `<span class="glyph">${glyph}</span>` + sqName(firstStep.from);
+  for (const step of steps) {
+    if (step.type === 'capture') notation += '×' + sqName(step.to);
+    else if (step.type === 'jumpOwn') notation += 'j' + sqName(step.to);
+    else if (step.type === 'jumpOpponent') notation += 's' + sqName(step.to);
+    else notation += '-' + sqName(step.to);
+  }
+  if (finalPiece && finalPiece.k && !wasKing) notation += '=' + (player === P1 ? '☆' : '★');
+  return notation;
+}
+function renderHistory() {
+  if (renderHistory._lastVersion === _historyVersion) return;
+  renderHistory._lastVersion = _historyVersion;
+  const historyList = document.getElementById('historyList');
+  const historyCount = document.getElementById('historyCount');
+  if (!historyList) return;
+  if (historyCount) historyCount.textContent = moveHistory.length;
+  if (moveHistory.length === 0) {
+    historyList.innerHTML = '<div class="history-empty">Sin jugadas todavía</div>';
+    return;
+  }
+  const wasAtBottom = historyList.scrollHeight - historyList.scrollTop - historyList.clientHeight < 20;
+  historyList.innerHTML = moveHistory.map((entry, idx) => {
+    const isLast = idx === moveHistory.length - 1;
+    const classes = ['history-entry', entry.player === P1 ? 'p1' : 'p2', entry.won ? 'won' : '', isLast ? 'last' : ''].filter(Boolean).join(' ');
+    return `<div class="${classes}" data-ply="${idx}"><span class="ply-num">${entry.plyNumber}.</span><span class="notation">${entry.notation}</span></div>`;
+  }).join('');
+  if (wasAtBottom) historyList.scrollTop = historyList.scrollHeight;
+  updateReplayHighlight();
+}
+
+function rebuildReplaySnapshots() {
+  if (!initialBoardForReplay) {
+    replaySnapshots = [];
+    return;
+  }
+  const savedFirstCoronation = firstNormalCoronationPlayer;
+
+  replaySnapshots = [{
+    board: initialBoardForReplay.map(row => row.map(p => p ? { ...p } : null)),
+    lastMoveStart: null,
+    lastMoveEnd: null,
+    gameOver: false, winner: null, winReason: null
+  }];
+
+  for (const entry of moveHistory) {
+    const prev = replaySnapshots[replaySnapshots.length - 1];
+    const boardSim = prev.board.map(row => row.map(p => p ? { ...p } : null));
+    let chainCaptures = 0;
+
+    for (const step of entry.steps) {
+      const piece = boardSim[step.from.r] ? boardSim[step.from.r][step.from.c] : null;
+      if (!piece) continue;
+
+      if (step.captured) {
+        boardSim[step.captured.r][step.captured.c] = null;
+        chainCaptures++;
+      }
+      boardSim[step.from.r][step.from.c] = null;
+      boardSim[step.to.r][step.to.c] = piece;
+
+      if (step.jumpOver && step.retreat) {
+        const jumped = boardSim[step.jumpOver.r] ? boardSim[step.jumpOver.r][step.jumpOver.c] : null;
+        boardSim[step.jumpOver.r][step.jumpOver.c] = null;
+        if (jumped) boardSim[step.retreat.r][step.retreat.c] = jumped;
+      }
+
+      if (!step.wasKing && !piece.k && chainCaptures >= 2) {
+        const ownFirstRow = piece.p === P1 ? ROWS - 1 : 0;
+        if (step.to.r === ownFirstRow) {
+          crownAt(piece, step.to.r, step.to.c, chainCaptures);
+          continue;
+        }
+      }
+      if (!step.wasKing && !piece.k && shouldCrown(piece, step.to.r, step.to.c, chainCaptures)) {
+        crownAt(piece, step.to.r, step.to.c, chainCaptures);
+      }
+    }
+
+    const lastStep = entry.steps[entry.steps.length - 1];
+    replaySnapshots.push({
+      board: boardSim,
+      lastMoveStart: lastStep ? { ...lastStep.from } : null,
+      lastMoveEnd: lastStep ? { ...lastStep.to } : null,
+      gameOver: !!entry.won,
+      winner: entry.winner ?? null,
+      winReason: entry.winReason ?? null
+    });
+  }
+
+  firstNormalCoronationPlayer = savedFirstCoronation;
+}
+
+function getViewState() {
+  if (!replayActive) {
+    return {
+      board,
+      lastMoveStart,
+      lastMoveEnd,
+      selected,
+      legalMoves,
+      chainActive,
+      pendingOwnJump,
+      isLive: true
+    };
+  }
+  const snap = replaySnapshots[replayIndex];
+  if (!snap) {
+    return {
+      board,
+      lastMoveStart: null,
+      lastMoveEnd: null,
+      selected: null,
+      legalMoves: [],
+      chainActive: false,
+      pendingOwnJump: null,
+      isLive: true
+    };
+  }
+  return {
+    board: snap.board,
+    lastMoveStart: snap.lastMoveStart,
+    lastMoveEnd: snap.lastMoveEnd,
+    selected: null,
+    legalMoves: [],
+    chainActive: false,
+    pendingOwnJump: null,
+    isLive: false
+  };
+}
+
+function setReplayIndex(idx) {
+  const N = moveHistory.length;
+  idx = Math.max(0, Math.min(N, idx));
+  replayIndex = idx;
+  replayActive = (idx < N);
+  clearAnimations();
+  if (replayActive) {
+    selected = null;
+    legalMoves = [];
+    pendingOwnJump = null;
+    chainActive = false;
+    if (aiThinking) {
+      aiStopRequested = true;
+      activeTurnId = 0;
+      if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+      aiThinking = false;
+    }
+  }
+  draw();
+  updateStatus();
+}
+
+function replayFirst() {
+  if (aiThinking || moveHistory.length === 0) return;
+  setReplayIndex(0);
+}
+function replayPrev() {
+  if (aiThinking || moveHistory.length === 0) return;
+  if (!replayActive) setReplayIndex(moveHistory.length - 1);
+  else setReplayIndex(replayIndex - 1);
+}
+function replayNext() {
+  if (aiThinking) return;
+  if (!replayActive) return;
+  setReplayIndex(replayIndex + 1);
+}
+function replayLast() {
+  if (aiThinking) return;
+  setReplayIndex(moveHistory.length);
+}
+function goToReplayPly(idx0based) {
+  if (aiThinking) return;
+  const N = moveHistory.length;
+  if (idx0based < 0 || idx0based >= N) return;
+  setReplayIndex(idx0based + 1);
+}
+
+function updateReplayHighlight() {
+  const historyList = document.getElementById('historyList');
+  if (!historyList) return;
+  const entries = historyList.querySelectorAll('.history-entry');
+  const targetIdx = replayActive ? (replayIndex - 1) : -1;
+  entries.forEach((el, idx) => {
+    el.classList.toggle('replay-current', idx === targetIdx);
+  });
+  if (replayActive && targetIdx >= 0 && entries[targetIdx]) {
+    entries[targetIdx].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function updateReplayButtons() {
+  const N = moveHistory.length;
+  const busy = aiThinking;
+  const bFirst = document.getElementById('btnReplayFirst');
+  const bPrev  = document.getElementById('btnReplayPrev');
+  const bNext  = document.getElementById('btnReplayNext');
+  const bLast  = document.getElementById('btnReplayLast');
+  const posEl  = document.getElementById('replayPos');
+  if (bFirst) bFirst.disabled = busy || N === 0 || (replayActive && replayIndex === 0);
+  if (bPrev)  bPrev.disabled  = busy || N === 0;
+  if (bNext)  bNext.disabled  = busy || !replayActive || replayIndex >= N;
+  if (bLast)  bLast.disabled  = busy || !replayActive;
+  if (posEl) {
+    if (replayActive) {
+      posEl.textContent = `${replayIndex} / ${N}`;
+      posEl.classList.add('active');
+    } else {
+      posEl.textContent = N > 0 ? `live · ${N}` : 'live';
+      posEl.classList.remove('active');
+    }
+  }
+}
+
+function undoMove() {
+  if (editMode) return;
+  aiStopRequested = true;
+  if (aiThinking) {
+    activeTurnId = 0;
+    if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+    aiThinking = false;
+  }
+  replayActive = false;
+  if (turnStartSnapshot) {
+    restoreSnapshot(turnStartSnapshot);
+    redoStack = [];
+    draw(); updateStatus();
+    return;
+  }
+  if (undoStack.length === 0) { draw(); updateStatus(); return; }
+  const humanPlayer = (mode === 'ai') ? (aiPlayer === P1 ? P2 : P1) : null;
+  const current = takeSnapshot();
+  if (mode === 'ai' && humanPlayer !== null) {
+    let restored = null;
+    while (undoStack.length > 0) {
+      const s = undoStack.pop();
+      restored = s;
+      if (s.turn === humanPlayer) break;
+    }
+    if (restored) {
+      redoStack.push(current);
+      restoreSnapshot(restored);
+    }
+  } else {
+    const snapshot = undoStack.pop();
+    redoStack.push(current);
+    restoreSnapshot(snapshot);
+  }
+  draw(); updateStatus();
+}
+function redoMove() {
+  if (editMode) return;
+  if (aiThinking) return;
+  if (turnStartSnapshot) return;
+  if (redoStack.length === 0) return;
+  replayActive = false;
+  const current = takeSnapshot();
+  const snapshot = redoStack.pop();
+  undoStack.push(current);
+  restoreSnapshot(snapshot);
+  draw(); updateStatus();
+  if (!gameOver && isAIPlayer(turn)) maybeStartAITurn();
+}
+
+function executeMove(move) {
+  if (!chainActive) {
+    turnStartSnapshot = takeSnapshot();
+    redoStack = [];
+    pendingTurnSteps = [];
+  }
+  const piece = board[move.from.r][move.from.c];
+  const wasKing = piece.k;
+  pendingTurnSteps.push({
+    from: { ...move.from }, to: { ...move.to }, type: move.type,
+    captured: move.captured ? { ...move.captured } : null,
+    jumpOver: move.jumpOver ? { ...move.jumpOver } : null,
+    retreat: move.retreat ? { ...move.retreat } : null,
+    player: piece.p, wasKing,
+    ortho: !!move.ortho, kingOrtho: !!move.kingOrtho
+  });
+  if (!chainActive) {
+    turnWasKingMove = wasKing;
+    turnWasCapture = false;
+    chainCaptureCount = 0;
+    lastMoveStart = { r: move.from.r, c: move.from.c };
+  }
+  lastMoveEnd = { r: move.to.r, c: move.to.c };
+
+  const capturedPiece = move.captured ? board[move.captured.r][move.captured.c] : null;
+  registerMoveAnim(piece, move.from.r, move.from.c, move.to.r, move.to.c);
+  if (capturedPiece) registerCaptureFlash(move.captured.r, move.captured.c, capturedPiece);
+
+  board[move.from.r][move.from.c] = null;
+  board[move.to.r][move.to.c] = piece;
+  if (move.captured) board[move.captured.r][move.captured.c] = null;
+  pendingOwnJump = null;
+  if (move.type === 'capture') {
+    turnWasCapture = true;
+    chainCaptureCount++;
+    updateChainFlags(move, piece);
+    if (move.ortho && !piece.k) chainOrthoDone = true;
+  }
+  if (!piece.k && chainCaptureCount >= 2) {
+    const ownFirstRow = piece.p === P1 ? ROWS - 1 : 0;
+    if (move.to.r === ownFirstRow) {
+      crownAt(piece, move.to.r, move.to.c, chainCaptureCount);
+      registerCoronationBurst(move.to.r, move.to.c);
+      gameOver = true; winner = piece.p; winReason = 'return';
+      chainActive = false; selected = null; legalMoves = [];
+      endTurn(); return;
+    }
+  }
+  let crowned = false;
+  if (!wasKing && !piece.k && shouldCrown(piece, move.to.r, move.to.c, chainCaptureCount)) {
+    crownAt(piece, move.to.r, move.to.c, chainCaptureCount);
+    crowned = true;
+    registerCoronationBurst(move.to.r, move.to.c);
+  }
+  if (checkKingDomination()) { endTurn(); return; }
+  if (crowned) {
+    chainActive = false; selected = null; legalMoves = [];
+    endTurn(); return;
+  }
+  if (move.type === 'capture' && !move.kingOrtho) {
+    const includeOrtho = isChainOrthoEnabled();
+    const more = getCapturesFrom(move.to.r, move.to.c, includeOrtho, true);
+    if (more.length > 0) {
+      chainActive = true;
+      selected = { r: move.to.r, c: move.to.c };
+      legalMoves = more;
+      startAnimationLoop();
+      draw(); updateStatus();
+      return;
+    }
+  }
+  chainActive = false;
+  selected = null;
+  legalMoves = [];
+  endTurn();
+}
+
+function executeOwnJumpWithRetreat(move, retreat) {
+  const piece = board[move.from.r][move.from.c];
+  const jumped = board[move.jumpOver.r][move.jumpOver.c];
+  turnStartSnapshot = takeSnapshot();
+  redoStack = [];
+  pendingTurnSteps = [{
+    from: { ...move.from }, to: { ...move.to }, type: 'jumpOwn',
+    captured: null,
+    jumpOver: { ...move.jumpOver },
+    retreat: { ...retreat },
+    player: piece.p, wasKing: false, ortho: false, kingOrtho: false
+  }];
+  lastMoveStart = { r: move.from.r, c: move.from.c };
+  lastMoveEnd = { r: move.to.r, c: move.to.c };
+
+  registerMoveAnim(piece, move.from.r, move.from.c, move.to.r, move.to.c);
+  if (jumped) registerMoveAnim(jumped, move.jumpOver.r, move.jumpOver.c, retreat.r, retreat.c);
+
+  board[move.from.r][move.from.c] = null;
+  board[move.to.r][move.to.c] = piece;
+  board[move.jumpOver.r][move.jumpOver.c] = null;
+  board[retreat.r][retreat.c] = jumped;
+  selected = null; legalMoves = []; pendingOwnJump = null; chainActive = false;
+  turnWasKingMove = false;
+  turnWasCapture = false;
+  endTurn();
+}
+
+function endTurn() {
+  if (turnStartSnapshot) {
+    undoStack.push(turnStartSnapshot);
+    turnStartSnapshot = null;
+  }
+  let entry = null;
+  if (pendingTurnSteps.length > 0) {
+    const lastStep = pendingTurnSteps[pendingTurnSteps.length - 1];
+    const finalPiece = board[lastStep.to.r]?.[lastStep.to.c];
+    entry = {
+      player: pendingTurnSteps[0].player,
+      plyNumber: moveHistory.length + 1,
+      steps: pendingTurnSteps.slice(),
+      notation: buildNotation(pendingTurnSteps, finalPiece),
+      won: false, winReason: null, winner: null
+    };
+    moveHistory.push(entry);
+    _historyVersion++;
+  }
+  pendingTurnSteps = [];
+  if (turnWasKingMove) {
+    if (!turnWasCapture) kingMoveStreak[turn]++;
+  } else {
+    kingMoveStreak[turn] = 0;
+  }
+  chainActive = false;
+  chainFirstWasForward = null;
+  chainHasBackwardDiag = false;
+  chainOrthoDone = false;
+  chainCaptureCount = 0;
+
+  const finalizeEntry = () => {
+    if (entry && gameOver) {
+      entry.won = true;
+      entry.winReason = winReason;
+      entry.winner = winner;
+      entry.notation += ' #';
+      _historyVersion++;
+    }
+  };
+
+  if (gameOver) {
+    finalizeEntry();
+    rebuildReplaySnapshots();
+    replayIndex = moveHistory.length;
+    triggerVictory();
+    draw(); updateStatus();
+    return;
+  }
+  if (checkNoPawns()) {
+    finalizeEntry();
+    rebuildReplaySnapshots();
+    replayIndex = moveHistory.length;
+    if (gameOver) triggerVictory();
+    draw(); updateStatus();
+    return;
+  }
+  turn = turn === P1 ? P2 : P1;
+  if (!hasAnyMoves(turn)) {
+    gameOver = true;
+    winner = turn === P1 ? P2 : P1;
+    winReason = 'noMoves';
+    chainActive = false; selected = null; legalMoves = []; pendingOwnJump = null;
+    finalizeEntry();
+    rebuildReplaySnapshots();
+    replayIndex = moveHistory.length;
+    triggerVictory();
+    draw(); updateStatus();
+    return;
+  }
+  rebuildReplaySnapshots();
+  replayIndex = moveHistory.length;
+  draw(); updateStatus();
+  maybeStartAITurn();
+}
+
+function maybeStartAITurn() {
+  if (replayActive) return;
+  if (gameOver || aiThinking) return;
+  if (!isAIPlayer(turn)) return;
+  setTimeout(aiTurn, mode === 'aiai' ? 400 : 300);
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORTAR / IMPORTAR JSON + PNG
+// ═══════════════════════════════════════════════════════════
+
+function cloneStep(s) {
+  return {
+    from: { ...s.from }, to: { ...s.to }, type: s.type,
+    captured: s.captured ? { ...s.captured } : null,
+    jumpOver: s.jumpOver ? { ...s.jumpOver } : null,
+    retreat: s.retreat ? { ...s.retreat } : null,
+    player: s.player, wasKing: s.wasKing,
+    ortho: !!s.ortho, kingOrtho: !!s.kingOrtho
+  };
+}
+
+function serializeGame() {
+  return {
+    format: 'duelo-estrellas',
+    version: 65,
+    savedAt: Date.now(),
+    ROWS, COLS,
+    density, mode, difficulty,
+    initialBoard: initialBoardForReplay
+      ? initialBoardForReplay.map(row => row.map(p => p ? { p: p.p, k: !!p.k, locked: !!p.locked } : null))
+      : null,
+    board: board.map(row => row.map(p => p ? { p: p.p, k: !!p.k, locked: !!p.locked } : null)),
+    turn,
+    kingMoveStreak: { [P1]: kingMoveStreak[P1], [P2]: kingMoveStreak[P2] },
+    firstNormalCoronationPlayer,
+    gameOver: !!gameOver,
+    winner,
+    winReason,
+    lastMoveStart: lastMoveStart ? { ...lastMoveStart } : null,
+    lastMoveEnd: lastMoveEnd ? { ...lastMoveEnd } : null,
+    moveHistory: moveHistory.map(e => ({
+      player: e.player, plyNumber: e.plyNumber,
+      steps: e.steps.map(cloneStep),
+      notation: e.notation,
+      won: !!e.won,
+      winReason: e.winReason ?? null,
+      winner: e.winner ?? null
+    }))
+  };
+}
+
+function isValidSave(data) {
+  if (!data || typeof data !== 'object') return false;
+  if (data.format !== 'duelo-estrellas') return false;
+  if (typeof data.version !== 'number') return false;
+  if (!Array.isArray(data.board)) return false;
+  if (typeof data.ROWS !== 'number' || typeof data.COLS !== 'number') return false;
+  if (data.ROWS < 4 || data.ROWS > 20 || data.COLS < 4 || data.COLS > 20) return false;
+  if (data.board.length !== data.ROWS) return false;
+  for (const row of data.board) {
+    if (!Array.isArray(row) || row.length !== data.COLS) return false;
+    for (const cell of row) {
+      if (cell === null) continue;
+      if (typeof cell !== 'object') return false;
+      if (cell.p !== P1 && cell.p !== P2) return false;
+    }
+  }
+  if (data.turn !== P1 && data.turn !== P2) return false;
+  return true;
+}
+
+function deserializeGame(data) {
+  if (!isValidSave(data)) return false;
+
+  if (editMode) {
+    editMode = false;
+    editPanel.style.display = 'none';
+    btnEdit.textContent = 'Editar tablero';
+    btnEdit.classList.remove('edit-active');
+  }
+
+  if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+  aiStopRequested = false;
+  aiThinking = false;
+  activeTurnId = 0;
+
+  clearAnimations();
+
+  ROWS = data.ROWS;
+  COLS = data.COLS;
+  density = data.density || 'abierta';
+  mode = data.mode || 'ai';
+  difficulty = data.difficulty || 3;
+  aiPlayer = P2;
+
+  initialBoardForReplay = data.initialBoard
+    ? data.initialBoard.map(row => row.map(p => p ? { p: p.p, k: !!p.k, locked: !!p.locked } : null))
+    : null;
+
+  board = data.board.map(row => row.map(p => p ? { p: p.p, k: !!p.k, locked: !!p.locked } : null));
+
+  turn = data.turn;
+  kingMoveStreak = {
+    [P1]: data.kingMoveStreak?.[P1] ?? 0,
+    [P2]: data.kingMoveStreak?.[P2] ?? 0
+  };
+  firstNormalCoronationPlayer = data.firstNormalCoronationPlayer ?? null;
+  gameOver = !!data.gameOver;
+  winner = data.winner ?? null;
+  winReason = data.winReason ?? null;
+  lastMoveStart = data.lastMoveStart ? { ...data.lastMoveStart } : null;
+  lastMoveEnd = data.lastMoveEnd ? { ...data.lastMoveEnd } : null;
+  moveHistory = (data.moveHistory || []).map(e => ({
+    player: e.player, plyNumber: e.plyNumber,
+    steps: (e.steps || []).map(cloneStep),
+    notation: e.notation || '',
+    won: !!e.won,
+    winReason: e.winReason ?? null,
+    winner: e.winner ?? null
+  }));
+
+  selected = null;
+  legalMoves = [];
+  pendingOwnJump = null;
+  chainActive = false;
+  chainFirstWasForward = null;
+  chainHasBackwardDiag = false;
+  chainOrthoDone = false;
+  chainCaptureCount = 0;
+  turnWasKingMove = false;
+  turnWasCapture = false;
+  pendingTurnSteps = [];
+  turnStartSnapshot = null;
+  undoStack = [];
+  redoStack = [];
+  _historyVersion++;
+
+  replayActive = false;
+  replayIndex = moveHistory.length;
+
+  rowsPerSide = rowsPerSideFor(ROWS, density);
+  rebuildReplaySnapshots();
+
+  if (ROWS === 8 && COLS === 8) selSize.value = '8';
+  else if (ROWS === 10 && COLS === 10) selSize.value = '10';
+  else selSize.value = '10x8';
+  selDensity.value = density;
+  selMode.value = mode;
+  selDiff.value = String(difficulty);
+
+  updateSubtitle();
+  resize();
+  updateStatus();
+
+  if (!gameOver && isAIPlayer(turn)) maybeStartAITurn();
+  return true;
+}
+
+function isSafeToSave() {
+  return !aiThinking && !chainActive;
+}
+
+function exportGame() {
+  try {
+    const data = serializeGame();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+    a.download = `duelo_estrellas_${COLS}x${ROWS}_${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('Partida exportada', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Error al exportar', 'error');
+  }
+}
+
+function importGameFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!isValidSave(data)) { showToast('Archivo JSON inválido', 'error'); return; }
+      if (deserializeGame(data)) {
+        showToast('Partida importada', 'success');
+      } else {
+        showToast('Error al cargar el archivo', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Archivo JSON corrupto', 'error');
+    }
+  };
+  reader.onerror = () => showToast('Error al leer el archivo', 'error');
+  reader.readAsText(file);
+}
+
+function exportPNG() {
+  try {
+    const dpr = 2;
+    const padding = 24;
+    const headerH = 52;
+    const W = px + padding * 2;
+    const H = py + padding * 2 + headerH;
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = W * dpr;
+    exportCanvas.height = H * dpr;
+    const ectx = exportCanvas.getContext('2d');
+    ectx.scale(dpr, dpr);
+
+    const bg = ectx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#1a1e28');
+    bg.addColorStop(1, '#0e1014');
+    ectx.fillStyle = bg;
+    ectx.fillRect(0, 0, W, H);
+
+    ectx.fillStyle = '#d4a843';
+    ectx.font = 'bold 20px "Segoe UI", system-ui, sans-serif';
+    ectx.textAlign = 'left';
+    ectx.textBaseline = 'middle';
+    ectx.fillText(`Duelo de Estrellas — ${COLS}×${ROWS}${replayActive ? ` · replay ${replayIndex}/${moveHistory.length}` : ''}`, padding, padding + headerH / 2);
+
+    const turnText = gameOver
+      ? (winner === P1 ? 'Victoria del claro' : winner === P2 ? 'Victoria del oscuro' : 'Tablas')
+      : `Turno: ${playerLabel(turn)}`;
+    ectx.fillStyle = '#8b919e';
+    ectx.font = '600 13px "Segoe UI", system-ui, sans-serif';
+    ectx.textAlign = 'right';
+    ectx.fillText(turnText, W - padding, padding + headerH / 2);
+
+    ectx.drawImage(canvas, padding, padding + headerH, px, py);
+
+    ectx.fillStyle = '#8b919e';
+    ectx.font = '11px "Segoe UI", system-ui, sans-serif';
+    ectx.textAlign = 'left';
+    ectx.fillText(`${moveHistory.length} jugada(s) · ${new Date().toLocaleString()}`, padding, H - padding / 2 - 2);
+
+    exportCanvas.toBlob(blob => {
+      if (!blob) { showToast('Error al generar la imagen', 'error'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `duelo_estrellas_${COLS}x${ROWS}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast('Imagen exportada', 'success');
+    }, 'image/png');
+  } catch (err) {
+    console.error(err);
+    showToast('Error al exportar la imagen', 'error');
+  }
+}
+
+let _toastTimer = null;
+function showToast(msg, type = 'success') {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.className = 'toast show ' + (type === 'error' ? 'error' : 'success');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2200);
+}
+
+// ═══════════════════════════════════════════════════════════
+// IA (worker) — MEJORADA v65
+// ═══════════════════════════════════════════════════════════
+const WIN_SCORE = 10000000;
+const LOSS_SCORE = -10000000;
+let historyHeuristic = {};
+
+function moveKey(step) { return step.from.r + ',' + step.from.c + '>' + step.to.r + ',' + step.to.c; }
+
+function isPawnCapturable(r, c) {
+  const pawn = board[r][c];
+  if (!pawn || pawn.k) return false;
+  const opponent = pawn.p === P1 ? P2 : P1;
+  for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+    const nr = r + dr, nc = c + dc;
+    if (!inBounds(nr, nc)) continue;
+    const q = board[nr][nc];
+    if (q && q.p === opponent && !q.k && !q.locked) {
+      const landR = r + 2*dr, landC = c + 2*dc;
+      if (inBounds(landR, landC) && !board[landR][landC]) return true;
+    }
+  }
+  for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+    const nr = r + dr, nc = c + dc;
+    if (!inBounds(nr, nc)) continue;
+    const q = board[nr][nc];
+    if (q && q.p === opponent && q.k && !q.locked) {
+      const landR = r + 2*dr, landC = c + 2*dc;
+      if (inBounds(landR, landC) && !board[landR][landC]) return true;
+    }
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════
+// EVALUACIÓN — v65
+// ═══════════════════════════════════════════════════════════
+function evaluateBoard(perspective) {
+  let score = 0;
+  const halfRow = (ROWS - 1) / 2, halfCol = (COLS - 1) / 2;
+  const maxCenterDist = halfRow + halfCol;
+  let myKings = 0, oppKings = 0, myPawns = 0, oppPawns = 0, myLocked = 0, oppLocked = 0;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (!p) continue;
+    const mine = p.p === perspective;
+    if (p.k) {
+      if (mine) { myKings++; if (p.locked) myLocked++; }
+      else { oppKings++; if (p.locked) oppLocked++; }
+    } else { if (mine) myPawns++; else oppPawns++; }
+  }
+
+  const maxPieces = Math.max(8, maxPiecesAtStart);
+  const currentPieces = myPawns + oppPawns + myKings + oppKings;
+  const endgamePhase = Math.max(0, Math.min(1, 1 - currentPieces / maxPieces));
+
+  const kingDiff = myKings - oppKings;
+  score += kingDiff * 800;
+  if (kingDiff === 2) score += 2200;
+  else if (kingDiff === -2) score -= 2600;
+  else if (kingDiff === 1) score += 300;
+  else if (kingDiff === -1) score -= 350;
+  score -= myLocked * 180;
+  score += oppLocked * 180;
+
+  const pawnBaseValue = 130 + 220 * endgamePhase;
+  const pawnDiff = myPawns - oppPawns;
+  score += pawnDiff * pawnBaseValue;
+
+  if (Math.abs(pawnDiff) >= 2) {
+    const leadBonus = pawnDiff * Math.abs(pawnDiff) * (30 + 90 * endgamePhase);
+    score += leadBonus;
+  }
+
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (!p) continue;
+    const sign = p.p === perspective ? 1 : -1;
+    if (p.k) {
+      if (p.locked) continue;
+      let mob = 0, capPawns = 0, capKings = 0, ownPawnsAdj = 0, enemyPawnsAdj = 0;
+      for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+        const nr = r + dr, nc = c + dc;
+        if (!inBounds(nr, nc)) continue;
+        const q = board[nr][nc];
+        if (!q) { mob++; continue; }
+        if (q.p === p.p) { if (!q.k) ownPawnsAdj++; continue; }
+        if (!q.k) enemyPawnsAdj++;
+        if (q.locked) continue;
+        const landR = r + 2*dr, landC = c + 2*dc;
+        if (inBounds(landR, landC) && !board[landR][landC]) {
+          if (q.k) capKings++;
+          else capPawns++;
+        }
+      }
+      score += sign * mob * 6;
+      score += sign * capPawns * 22;
+      score += sign * capKings * 140;
+      score += sign * ownPawnsAdj * 8;
+      if (enemyPawnsAdj >= 2) score -= sign * (240 + 320 * endgamePhase);
+      else if (enemyPawnsAdj === 1) score -= sign * (25 + 90 * endgamePhase);
+      if (kingMoveStreak[p.p] >= 2 && !isKingLimitExempt(p.p)) score -= sign * 40;
+      const cd = Math.abs(r - halfRow) + Math.abs(c - halfCol);
+      score += sign * Math.max(0, maxCenterDist - cd) * 3;
+    } else {
+      const adv = p.p === P1 ? (ROWS - 1 - r) : r;
+      const maxAdv = ROWS - 1;
+      score += sign * adv * 10;
+      if (adv === maxAdv - 1) score += sign * 160;
+      else if (adv === maxAdv - 2) score += sign * 65;
+      else if (adv >= maxAdv - 3) score += sign * 30;
+      if (adv === maxAdv) score -= sign * 120;
+
+      const colCenter = halfCol - Math.abs(c - halfCol);
+      score += sign * colCenter * 2;
+      if (isColumnRestricted(r, c)) score -= sign * 22;
+      const fwd = p.p === P1 ? -1 : 1;
+      let pawnMob = 0;
+      for (const dc of [-1, 1]) {
+        const nr = r + fwd, nc = c + dc;
+        if (inBounds(nr, nc) && !board[nr][nc] && !isColumnRestricted(nr, nc)) pawnMob++;
+      }
+      const vr = r + fwd;
+      if (inBounds(vr, c) && !board[vr][c] && !isColumnRestricted(vr, c)) pawnMob++;
+      score += sign * pawnMob * 4;
+      let support = 0;
+      for (const dr of [-1, 0, 1]) for (const dc of [-1, 0, 1]) {
+        if (dr === 0 && dc === 0) continue;
+        if (dr === fwd) continue;
+        const nr = r + dr, nc = c + dc;
+        if (!inBounds(nr, nc)) continue;
+        const q = board[nr][nc];
+        if (q && q.p === p.p && !q.k) support++;
+      }
+      score += sign * Math.min(support, 2) * 7;
+      if (isPawnCapturable(r, c)) {
+        const dangerPenalty = 120 + 140 * endgamePhase + adv * 18;
+        score -= sign * dangerPenalty;
+      }
+    }
+  }
+  return score;
+}
+
+function applyTurnForAI(turn_) {
+  const savedFirst = firstNormalCoronationPlayer;
+  const records = [];
+  const firstStep = turn_.steps[0];
+  const firstPiece = firstStep ? board[firstStep.from.r][firstStep.from.c] : null;
+  const movingPlayer = firstPiece ? firstPiece.p : null;
+  const wasKingTurn = firstPiece ? firstPiece.k : false;
+  const wasCaptureTurn = turn_.steps.some(s => !!s.captured);
+  const savedStreak = movingPlayer !== null ? kingMoveStreak[movingPlayer] : 0;
+  let capturesSoFar = 0;
+  for (let si = 0; si < turn_.steps.length; si++) {
+    const step = turn_.steps[si];
+    const piece = board[step.from.r][step.from.c];
+    if (!piece) break;
+    const rec = { piece, from: {...step.from}, to: {...step.to}, wasKing: piece.k, wasLocked: piece.locked, capturedPiece: null, capturedAt: null, jumpedPiece: null, jumpedFrom: null, jumpedTo: null };
+    if (step.captured) {
+      rec.capturedPiece = board[step.captured.r][step.captured.c];
+      rec.capturedAt = {...step.captured};
+      board[step.captured.r][step.captured.c] = null;
+      capturesSoFar++;
+    }
+    board[step.from.r][step.from.c] = null;
+    board[step.to.r][step.to.c] = piece;
+    if (!piece.k && shouldCrown(piece, step.to.r, step.to.c, capturesSoFar)) crownAt(piece, step.to.r, step.to.c, capturesSoFar);
+    if (step.jumpOwn && step.retreat) {
+      rec.jumpedPiece = board[step.jumpOver.r][step.jumpOver.c];
+      rec.jumpedFrom = {...step.jumpOver};
+      rec.jumpedTo = {...step.retreat};
+      board[step.jumpOver.r][step.jumpOver.c] = null;
+      board[step.retreat.r][step.retreat.c] = rec.jumpedPiece;
+    }
+    records.push(rec);
+  }
+  if (movingPlayer !== null) {
+    if (wasKingTurn) { if (!wasCaptureTurn) kingMoveStreak[movingPlayer]++; }
+    else kingMoveStreak[movingPlayer] = 0;
+  }
+  return { records, savedFirst, movingPlayer, savedStreak };
+}
+function undoAI(state) {
+  firstNormalCoronationPlayer = state.savedFirst;
+  if (state.movingPlayer !== null && state.movingPlayer !== undefined) kingMoveStreak[state.movingPlayer] = state.savedStreak;
+  for (let i = state.records.length - 1; i >= 0; i--) {
+    const rec = state.records[i];
+    if (rec.jumpedPiece) {
+      board[rec.jumpedTo.r][rec.jumpedTo.c] = null;
+      board[rec.jumpedFrom.r][rec.jumpedFrom.c] = rec.jumpedPiece;
+    }
+    board[rec.to.r][rec.to.c] = null;
+    board[rec.from.r][rec.from.c] = rec.piece;
+    rec.piece.k = rec.wasKing;
+    rec.piece.locked = rec.wasLocked;
+    if (rec.capturedPiece) board[rec.capturedAt.r][rec.capturedAt.c] = rec.capturedPiece;
+  }
+}
+
+function exploreChains(player, r, c, hasBackwardDiag, prevSteps, visited) {
+  const piece = board[r][c];
+  if (!piece) return [];
+  const orthoActive = hasBackwardDiag === true;
+  const isChainContinuation = prevSteps.length > 0;
+  const captures = getCapturesFrom(r, c, orthoActive, isChainContinuation);
+  if (captures.length === 0) return [];
+  const results = [];
+  const ownFirstRow = player === P1 ? ROWS - 1 : 0;
+  for (const cap of captures) {
+    const key = cap.to.r + ',' + cap.to.c;
+    if (visited.has(key)) continue;
+    const capturedPiece = board[cap.captured.r][cap.captured.c];
+    board[cap.from.r][cap.from.c] = null;
+    board[cap.to.r][cap.to.c] = piece;
+    board[cap.captured.r][cap.captured.c] = null;
+    const newSteps = prevSteps.concat([cap]);
+    const dr = cap.to.r - cap.from.r, dc = cap.to.c - cap.from.c;
+    const isDiag = Math.abs(dr) === 2 && Math.abs(dc) === 2;
+    const isBwd = isDiag && dr === -(player === P1 ? -1 : 1) * 2;
+    const newHasBwd = hasBackwardDiag || isBwd;
+    if (!piece.k && newSteps.length >= 2 && cap.to.r === ownFirstRow) {
+      cap.crowned = true;
+      results.push({ steps: newSteps.slice(), captures: newSteps.length, winsByReturn: true, crowned: false });
+      board[cap.to.r][cap.to.c] = null; board[cap.from.r][cap.from.c] = piece; board[cap.captured.r][cap.captured.c] = capturedPiece;
+      continue;
+    }
+    const willCrown = !piece.k && shouldCrown(piece, cap.to.r, cap.to.c, newSteps.length);
+    if (willCrown) {
+      cap.crowned = true;
+      results.push({ steps: newSteps.slice(), captures: newSteps.length, winsByReturn: false, crowned: true });
+      board[cap.to.r][cap.to.c] = null; board[cap.from.r][cap.from.c] = piece; board[cap.captured.r][cap.captured.c] = capturedPiece;
+      continue;
+    }
+    if (cap.kingOrtho) {
+      results.push({ steps: newSteps.slice(), captures: newSteps.length, winsByReturn: false, crowned: false });
+      board[cap.to.r][cap.to.c] = null; board[cap.from.r][cap.from.c] = piece; board[cap.captured.r][cap.captured.c] = capturedPiece;
+      continue;
+    }
+    const newVisited = new Set(visited);
+    newVisited.add(key);
+    const sub = exploreChains(player, cap.to.r, cap.to.c, newHasBwd, newSteps, newVisited);
+    if (sub.length === 0) results.push({ steps: newSteps.slice(), captures: newSteps.length, winsByReturn: false, crowned: false });
+    else results.push(...sub);
+    board[cap.to.r][cap.to.c] = null; board[cap.from.r][cap.from.c] = piece; board[cap.captured.r][cap.captured.c] = capturedPiece;
+  }
+  return results;
+}
+
+function generateNonCapturingTurnsForAI(player) {
+  const turns = [];
+  const canKingMove = kingMoveStreak[player] < 2 || isKingLimitExempt(player);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const piece = board[r][c];
+    if (!piece || piece.p !== player || piece.locked) continue;
+    if (piece.k) {
+      if (!canKingMove) continue;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = r + dr, nc = c + dc;
+        if (!inBounds(nr, nc) || board[nr][nc]) continue;
+        if (kingMoveWouldBlockAnyPawn(player, r, c, nr, nc)) continue;
+        turns.push({ steps: [{from: {r, c}, to: {r: nr, c: nc}, type: 'king-step'}], captures: 0, winsByReturn: false, crowned: false });
+      }
+    } else {
+      const forward = player === P1 ? -1 : 1;
+      const promoRow = player === P1 ? 0 : ROWS - 1;
+      {
+        const nr = r + forward, nc = c;
+        if (inBounds(nr, nc) && !board[nr][nc] && !isColumnRestricted(nr, nc)) {
+          if (!(nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, player))) {
+            const willCrown = shouldCrown(piece, nr, nc, 0);
+            turns.push({ steps: [{from: {r, c}, to: {r: nr, c: nc}, type: 'step'}], captures: 0, winsByReturn: false, crowned: willCrown });
+          }
+        }
+      }
+      for (const dc of [-1, 1]) {
+        const nr = r + forward, nc = c + dc;
+        if (!inBounds(nr, nc) || board[nr][nc] || isColumnRestricted(nr, nc)) continue;
+        if (nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, player)) continue;
+        const willCrown = shouldCrown(piece, nr, nc, 0);
+        turns.push({ steps: [{from: {r, c}, to: {r: nr, c: nc}, type: 'diag'}], captures: 0, winsByReturn: false, crowned: willCrown });
+      }
+      const midR = r + forward, midC = c;
+      const landR = r + forward * 2, landC = c;
+      if (inBounds(midR, midC) && board[midR][midC] && inBounds(landR, landC) && !board[landR][landC] && !isColumnRestricted(landR, landC)) {
+        const jumped = board[midR][midC];
+        if (!jumped.k && landR !== promoRow) {
+          if (jumped.p !== player) {
+            turns.push({ steps: [{from: {r, c}, to: {r: landR, c: landC}, type: 'jumpOpponent', jumpOver: {r: midR, c: midC}}], captures: 0, winsByReturn: false, crowned: false });
+          } else {
+            const backRow = midR - forward;
+            const retreats = [{r: backRow, c: midC-1}, {r: backRow, c: midC+1}].filter(o => inBounds(o.r, o.c) && !board[o.r][o.c] && !isColumnRestricted(o.r, o.c));
+            for (const ret of retreats) {
+              turns.push({ steps: [{from: {r, c}, to: {r: landR, c: landC}, type: 'jumpOwn', jumpOver: {r: midR, c: midC}, jumpOwn: true, retreat: ret}], captures: 0, winsByReturn: false, crowned: false });
+            }
+          }
+        }
+      }
+    }
+  }
+  return turns;
+}
+
+function generateAllTurnsForAI(player) {
+  const turns = [];
+  let hasCapture = false;
+  outer:
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && !p.locked && getCapturesFrom(r, c, false).length > 0) { hasCapture = true; break outer; }
+  }
+  if (hasCapture) {
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const p = board[r][c];
+      if (!p || p.p !== player || p.locked) continue;
+      if (getCapturesFrom(r, c, false).length === 0) continue;
+      turns.push(...exploreChains(player, r, c, false, [], new Set()));
+    }
+  } else {
+    turns.push(...generateNonCapturingTurnsForAI(player));
+  }
+  return turns;
+}
+
+function quiescence(player, alpha, beta, perspective, ply, startTime, timeLimit) {
+  if (Date.now() - startTime > timeLimit) return evaluateBoard(perspective);
+  if (!playerHasCaptures(player)) return evaluateBoard(perspective);
+  const turns = generateAllTurnsForAI(player);
+  if (turns.length === 0) return evaluateBoard(perspective);
+  if (turns[0].captures === 0) return evaluateBoard(perspective);
+  turns.sort((a, b) => b.captures - a.captures);
+  const nextPlayer = player === P1 ? P2 : P1;
+  const maximizing = player === perspective;
+  if (maximizing) {
+    let best = -Infinity;
+    for (const t of turns) {
+      const state = applyTurnForAI(t);
+      let score;
+      if (t.winsByReturn) score = WIN_SCORE - ply;
+      else score = quiescence(nextPlayer, alpha, beta, perspective, ply + 1, startTime, timeLimit);
+      undoAI(state);
+      if (score > best) best = score;
+      if (score > alpha) alpha = score;
+      if (alpha >= beta) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const t of turns) {
+      const state = applyTurnForAI(t);
+      let score;
+      if (t.winsByReturn) score = LOSS_SCORE + ply;
+      else score = quiescence(nextPlayer, alpha, beta, perspective, ply + 1, startTime, timeLimit);
+      undoAI(state);
+      if (score < best) best = score;
+      if (score < beta) beta = score;
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+}
+
+function minimax(player, depth, alpha, beta, perspective, ply, startTime, timeLimit) {
+  if (Date.now() - startTime > timeLimit) return evaluateBoard(perspective);
+  const k1 = countKings(P1), k2 = countKings(P2);
+  if (k1 - k2 >= 3) return perspective === P1 ? WIN_SCORE - ply : LOSS_SCORE + ply;
+  if (k2 - k1 >= 3) return perspective === P2 ? WIN_SCORE - ply : LOSS_SCORE + ply;
+  if (!hasAnyPawnsOnBoard()) {
+    if (k1 > k2) return perspective === P1 ? WIN_SCORE - ply : LOSS_SCORE + ply;
+    if (k2 > k1) return perspective === P2 ? WIN_SCORE - ply : LOSS_SCORE + ply;
+    if (firstNormalCoronationPlayer === perspective) return WIN_SCORE - ply;
+    if (firstNormalCoronationPlayer === (perspective === P1 ? P2 : P1)) return LOSS_SCORE + ply;
+    return 0;
+  }
+  if (depth <= 0) return quiescence(player, alpha, beta, perspective, ply, startTime, timeLimit);
+  const turns = generateAllTurnsForAI(player);
+  if (turns.length === 0) return player === perspective ? LOSS_SCORE + ply : WIN_SCORE - ply;
+  turns.sort((a, b) => {
+    if (a.winsByReturn !== b.winsByReturn) return b.winsByReturn ? 1 : -1;
+    if (a.crowned !== b.crowned) return b.crowned ? 1 : -1;
+    let aV = 0, bV = 0;
+    if (a.captures > 0 && a.steps[0] && a.steps[0].captured) {
+      const av = board[a.steps[0].captured.r]?.[a.steps[0].captured.c];
+      if (av) aV = av.k ? 100 : 1;
+    }
+    if (b.captures > 0 && b.steps[0] && b.steps[0].captured) {
+      const bv = board[b.steps[0].captured.r]?.[b.steps[0].captured.c];
+      if (bv) bV = bv.k ? 100 : 1;
+    }
+    if (aV !== bV) return bV - aV;
+    if (a.captures !== b.captures) return b.captures - a.captures;
+    return (historyHeuristic[moveKey(b.steps[0])] || 0) - (historyHeuristic[moveKey(a.steps[0])] || 0);
+  });
+  const nextPlayer = player === P1 ? P2 : P1;
+  const maximizing = player === perspective;
+  if (maximizing) {
+    let best = -Infinity;
+    for (const t of turns) {
+      const state = applyTurnForAI(t);
+      if (t.winsByReturn) { undoAI(state); return WIN_SCORE - ply; }
+      const ev = minimax(nextPlayer, depth - 1, alpha, beta, perspective, ply + 1, startTime, timeLimit);
+      undoAI(state);
+      if (ev > best) best = ev;
+      if (ev > alpha) alpha = ev;
+      if (beta <= alpha) {
+        if (t.captures === 0 && t.steps.length === 1) {
+          const key = moveKey(t.steps[0]);
+          historyHeuristic[key] = (historyHeuristic[key] || 0) + depth * depth;
+        }
+        break;
+      }
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const t of turns) {
+      const state = applyTurnForAI(t);
+      if (t.winsByReturn) { undoAI(state); return LOSS_SCORE + ply; }
+      const ev = minimax(nextPlayer, depth - 1, alpha, beta, perspective, ply + 1, startTime, timeLimit);
+      undoAI(state);
+      if (ev < best) best = ev;
+      if (ev < beta) beta = ev;
+      if (beta <= alpha) {
+        if (t.captures === 0 && t.steps.length === 1) {
+          const key = moveKey(t.steps[0]);
+          historyHeuristic[key] = (historyHeuristic[key] || 0) + depth * depth;
+        }
+        break;
+      }
+    }
+    return best;
+  }
+}
+
+function chooseEasyMove(player) {
+  const turns = generateAllTurnsForAI(player);
+  if (turns.length === 0) return null;
+  for (const t of turns) if (t.winsByReturn) return t;
+  const scored = turns.map(t => {
+    const state = applyTurnForAI(t);
+    let s = evaluateBoard(player) + t.captures * 30;
+    if (t.crowned) s += 80;
+    undoAI(state);
+    return { t, s };
+  });
+  scored.sort((a, b) => b.s - a.s);
+  const k = Math.max(1, Math.ceil(scored.length * 0.6));
+  return scored[Math.floor(Math.random() * k)].t;
+}
+
+function chooseIterativeMove(player, maxDepth, timeMs, jitterAmount = 0) {
+  const startTime = Date.now();
+  const turns = generateAllTurnsForAI(player);
+  if (turns.length === 0) return null;
+  for (const t of turns) if (t.winsByReturn) return t;
+  turns.sort((a, b) => {
+    if (a.crowned !== b.crowned) return b.crowned ? 1 : -1;
+    return b.captures - a.captures;
+  });
+  let ordered = turns.slice();
+  let bestTurn = ordered[0];
+  const nextPlayer = player === P1 ? P2 : P1;
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    if (Date.now() - startTime > timeMs * 0.9) break;
+    let alpha = -Infinity;
+    let bestVal = -Infinity;
+    let candidates = [];
+    let aborted = false;
+    for (const t of ordered) {
+      if (Date.now() - startTime > timeMs) { aborted = true; break; }
+      const state = applyTurnForAI(t);
+      let ev;
+      if (t.winsByReturn) ev = WIN_SCORE;
+      else ev = minimax(nextPlayer, depth - 1, alpha, Infinity, player, 1, startTime, timeMs);
+      undoAI(state);
+      if (ev > bestVal) {
+        bestVal = ev;
+        candidates = [t];
+        const newAlpha = jitterAmount > 0 ? ev - jitterAmount : ev;
+        if (newAlpha > alpha) alpha = newAlpha;
+      } else if (jitterAmount > 0 && ev >= bestVal - jitterAmount) {
+        candidates.push(t);
+      }
+    }
+    if (!aborted && candidates.length > 0) {
+      const pick = (jitterAmount > 0 && candidates.length > 1)
+        ? candidates[Math.floor(Math.random() * candidates.length)]
+        : candidates[0];
+      bestTurn = pick;
+      const idx = ordered.indexOf(pick);
+      if (idx > 0) { ordered.splice(idx, 1); ordered.unshift(pick); }
+    }
+    if (bestVal >= WIN_SCORE - 1000 || bestVal <= LOSS_SCORE + 1000) break;
+  }
+  return bestTurn;
+}
+
+function chooseBestMove(player, level, randomize = false) {
+  if (level === 1) return chooseEasyMove(player);
+  const { pawns } = countPieces();
+  const piecesOnBoard = pawns + countKings(P1) + countKings(P2);
+  const loadFactor = piecesOnBoard / (ROWS * COLS * 0.5);
+  const loadClamped = Math.max(0.6, Math.min(1.8, loadFactor));
+  const maxDim = Math.max(ROWS, COLS);
+  const jitterAmount = randomize ? 20 : 0;
+  if (level === 2) {
+    const maxDepth = maxDim <= 6 ? 5 : maxDim <= 8 ? 4 : 3;
+    const baseMs = maxDim <= 8 ? 1500 : 2000;
+    const timeMs = Math.min(4000, Math.round(baseMs * loadClamped));
+    return chooseIterativeMove(player, maxDepth, timeMs, jitterAmount);
+  }
+  const maxDepth = maxDim <= 6 ? 8 : maxDim <= 8 ? 6 : maxDim <= 10 ? 5 : 4;
+  const baseMs = maxDim <= 8 ? 3000 : 4000;
+  const timeMs = Math.min(6000, Math.round(baseMs * loadClamped));
+  return chooseIterativeMove(player, maxDepth, timeMs, jitterAmount);
+}
+
+const AI_CONSTANTS = `
+const P1 = 1, P2 = 2;
+const WIN_SCORE = 10000000;
+const LOSS_SCORE = -10000000;
+let ROWS = 8;
+let COLS = 8;
+let rowsPerSide = 2;
+let maxPiecesAtStart = 32;
+let board = [];
+let kingMoveStreak = { [P1]: 0, [P2]: 0 };
+let firstNormalCoronationPlayer = null;
+let historyHeuristic = {};
+`;
+
+const AI_FUNCTIONS = [
+  inBounds, isCorner, isStartingSquare, isColumnRestricted,
+  isBetweenTwoEnemyPawns, shouldCrown, crownAt, canPawnCaptureKing,
+  getPawnMovesForBlocking, getCapturesFrom, kingMoveWouldBlockAnyPawn,
+  playerHasPawns, isKingLimitExempt, hasAnyPawnsOnBoard,
+  countKings, countPieces, playerHasCaptures,
+  exploreChains, generateNonCapturingTurnsForAI, generateAllTurnsForAI,
+  applyTurnForAI, undoAI, isPawnCapturable, evaluateBoard, moveKey,
+  quiescence, minimax, chooseEasyMove, chooseIterativeMove, chooseBestMove
+];
+
+const AI_BOOTSTRAP = `
+self.onmessage = (e) => {
+  const m = e.data;
+  if (m.type !== 'think') return;
+  try {
+    ROWS = m.ROWS;
+    COLS = m.COLS;
+    rowsPerSide = m.rowsPerSide;
+    maxPiecesAtStart = m.maxPiecesAtStart;
+    board = m.board;
+    kingMoveStreak = m.kingMoveStreak;
+    firstNormalCoronationPlayer = m.firstNormalCoronationPlayer;
+    historyHeuristic = {};
+    const result = chooseBestMove(m.player, m.difficulty, !!m.randomize);
+    self.postMessage({ type: 'move', turnId: m.turnId, turn: result });
+  } catch (err) {
+    self.postMessage({ type: 'error', turnId: m.turnId, error: String((err && err.stack) || err) });
+  }
+};
+`;
+
+const AI_WORKER_SOURCE =
+  AI_CONSTANTS + '\n' +
+  AI_FUNCTIONS.map(f => f.toString()).join('\n') + '\n' +
+  AI_BOOTSTRAP;
+
+function ensureAIWorker() {
+  if (aiWorker || aiWorkerBroken) return;
+  try {
+    const blob = new Blob([AI_WORKER_SOURCE], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    aiWorker = new Worker(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    aiWorker.onmessage = (e) => {
+      const m = e.data;
+      if (m.turnId !== activeTurnId) return;
+      if (aiStopRequested) return;
+      if (m.type === 'error') {
+        console.error('AI worker error:', m.error);
+        aiThinking = false; updateStatus(); draw();
+        return;
+      }
+      aiThinking = false;
+      if (!m.turn) {
+        gameOver = true;
+        winner = currentAIPlayer === P1 ? P2 : P1;
+        winReason = 'noMoves';
+        rebuildReplaySnapshots();
+        replayIndex = moveHistory.length;
+        triggerVictory();
+        draw(); updateStatus();
+        return;
+      }
+      executeAITurn(m.turn, 0, currentAIPlayer);
+    };
+    aiWorker.onerror = (err) => {
+      console.warn('AI worker crashed, falling back to sync:', err);
+      aiWorkerBroken = true;
+      if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+      if (aiThinking) { aiThinking = false; aiTurn(); }
+    };
+  } catch (err) {
+    console.warn('Worker creation failed, using sync fallback:', err);
+    aiWorkerBroken = true;
+    aiWorker = null;
+  }
+}
+
+function aiTurn() {
+  if (gameOver || aiThinking || editMode || replayActive) return;
+  const player = turn;
+  currentAIPlayer = player;
+  aiThinking = true;
+  aiStopRequested = false;
+  updateStatus(); draw();
+  if (aiWorkerBroken || typeof Worker === 'undefined') {
+    setTimeout(() => {
+      if (editMode || aiStopRequested || replayActive) { aiThinking = false; aiStopRequested = false; updateStatus(); draw(); return; }
+      const t = chooseBestMove(player, difficulty, mode === 'aiai');
+      if (aiStopRequested || replayActive) { aiThinking = false; aiStopRequested = false; updateStatus(); draw(); return; }
+      aiThinking = false;
+      if (!t) {
+        gameOver = true;
+        winner = player === P1 ? P2 : P1;
+        winReason = 'noMoves';
+        rebuildReplaySnapshots();
+        replayIndex = moveHistory.length;
+        triggerVictory();
+        draw(); updateStatus(); return;
+      }
+      executeAITurn(t, 0, player);
+    }, 150);
+    return;
+  }
+  ensureAIWorker();
+  if (!aiWorker) { aiWorkerBroken = true; aiThinking = false; aiTurn(); return; }
+  activeTurnId = ++aiTurnId;
+  const maxPiecesAtStart = initialPiecesPerSide(ROWS, COLS, density) * 2;
+  aiWorker.postMessage({
+    type: 'think', turnId: activeTurnId, player, difficulty,
+    randomize: mode === 'aiai',
+    ROWS, COLS, rowsPerSide,
+    maxPiecesAtStart,
+    board: board.map(row => row.map(p => p ? { p: p.p, k: p.k, locked: !!p.locked } : null)),
+    kingMoveStreak: { ...kingMoveStreak },
+    firstNormalCoronationPlayer
+  });
+}
+
+function executeAITurn(turn_, stepIdx, player) {
+  if (editMode || replayActive) return;
+  if (stepIdx >= turn_.steps.length) {
+    const lastStep = turn_.steps[turn_.steps.length - 1];
+    const lastPiece = board[lastStep.to.r][lastStep.to.c];
+    const captureCount = turn_.steps.filter(s => s.captured).length;
+    if (turn_.winsByReturn) {
+      crownAt(lastPiece, lastStep.to.r, lastStep.to.c, captureCount);
+      registerCoronationBurst(lastStep.to.r, lastStep.to.c);
+      gameOver = true; winner = player; winReason = 'return';
+      endTurn(); return;
+    }
+    if (lastPiece && !lastPiece.k && shouldCrown(lastPiece, lastStep.to.r, lastStep.to.c, captureCount)) {
+      crownAt(lastPiece, lastStep.to.r, lastStep.to.c, captureCount);
+      registerCoronationBurst(lastStep.to.r, lastStep.to.c);
+    }
+    if (checkKingDomination()) { endTurn(); return; }
+    endTurn(); return;
+  }
+  if (aiStopRequested) return;
+  const step = turn_.steps[stepIdx];
+  const piece = board[step.from.r][step.from.c];
+  if (!piece) { endTurn(); return; }
+  if (stepIdx === 0) {
+    turnStartSnapshot = takeSnapshot();
+    redoStack = [];
+    pendingTurnSteps = [];
+    turnWasKingMove = piece.k;
+    turnWasCapture = false;
+    lastMoveStart = { r: step.from.r, c: step.from.c };
+  }
+  pendingTurnSteps.push({
+    from: { ...step.from }, to: { ...step.to }, type: step.type,
+    captured: step.captured ? { ...step.captured } : null,
+    jumpOver: step.jumpOver ? { ...step.jumpOver } : null,
+    retreat: step.retreat ? { ...step.retreat } : null,
+    player: piece.p, wasKing: piece.k,
+    ortho: !!step.ortho, kingOrtho: !!step.kingOrtho
+  });
+
+  const capturedPieceAI = step.captured ? board[step.captured.r][step.captured.c] : null;
+  const jumpedPieceAI = (step.jumpOwn && step.retreat) ? board[step.jumpOver.r][step.jumpOver.c] : null;
+  registerMoveAnim(piece, step.from.r, step.from.c, step.to.r, step.to.c);
+  if (capturedPieceAI) registerCaptureFlash(step.captured.r, step.captured.c, capturedPieceAI);
+
+  board[step.from.r][step.from.c] = null;
+  board[step.to.r][step.to.c] = piece;
+  if (step.captured) { board[step.captured.r][step.captured.c] = null; turnWasCapture = true; }
+  if (step.jumpOwn && step.retreat && jumpedPieceAI) {
+    registerMoveAnim(jumpedPieceAI, step.jumpOver.r, step.jumpOver.c, step.retreat.r, step.retreat.c);
+    board[step.jumpOver.r][step.jumpOver.c] = null;
+    board[step.retreat.r][step.retreat.c] = jumpedPieceAI;
+  }
+  lastMoveEnd = { r: step.to.r, c: step.to.c };
+  draw(); updateStatus();
+  if (stepIdx + 1 < turn_.steps.length) setTimeout(() => executeAITurn(turn_, stepIdx + 1, player), 260);
+  else executeAITurn(turn_, stepIdx + 1, player);
+}
+
+// ── Canvas ──
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let cellSize = 60, px = 480, py = 480;
+
+function resize() {
+  const wrap = document.querySelector('.board-wrap');
+  const availW = (wrap.clientWidth || 700) - 4;
+  const availH = window.innerHeight - (window.innerWidth <= 820 ? 260 : 60);
+  const maxTotalPx = 820;
+  const maxCellFromW = Math.floor(Math.min(availW, maxTotalPx) / COLS);
+  const maxCellFromH = Math.floor(Math.min(availH, maxTotalPx) / ROWS);
+  cellSize = Math.max(20, Math.min(maxCellFromW, maxCellFromH));
+  px = cellSize * COLS;
+  py = cellSize * ROWS;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(px * dpr);
+  canvas.height = Math.round(py * dpr);
+  canvas.style.width = px + 'px';
+  canvas.style.height = py + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+function draw() {
+  const view = getViewState();
+  const vBoard = view.board;
+  const now = performance.now();
+
+  ctx.clearRect(0, 0, px, py);
+
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    ctx.fillStyle = ((r + c) % 2 === 0) ? '#EDD9B5' : '#6B9E5C';
+    ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+  }
+  ctx.save();
+  ctx.fillStyle = 'rgba(120, 80, 180, 0.10)';
+  ctx.fillRect(0, 0, cellSize, py);
+  ctx.fillRect(px - cellSize, 0, cellSize, py);
+  ctx.fillStyle = 'rgba(212, 168, 67, 0.16)';
+  for (let r = 0; r < ROWS; r++) {
+    if (isStartingSquare(r, 0)) ctx.fillRect(0, r * cellSize, cellSize, cellSize);
+    if (isStartingSquare(r, COLS - 1)) ctx.fillRect((COLS - 1) * cellSize, r * cellSize, cellSize, cellSize);
+  }
+  ctx.restore();
+
+  if (view.lastMoveStart && view.lastMoveEnd) {
+    const fx = view.lastMoveStart.c * cellSize + cellSize / 2;
+    const fy = view.lastMoveStart.r * cellSize + cellSize / 2;
+    const tx = view.lastMoveEnd.c * cellSize + cellSize / 2;
+    const ty = view.lastMoveEnd.r * cellSize + cellSize / 2;
+    ctx.fillStyle = 'rgba(212,168,67,.30)';
+    ctx.fillRect(view.lastMoveStart.c * cellSize, view.lastMoveStart.r * cellSize, cellSize, cellSize);
+    ctx.fillStyle = 'rgba(212,168,67,.45)';
+    ctx.fillRect(view.lastMoveEnd.c * cellSize, view.lastMoveEnd.r * cellSize, cellSize, cellSize);
+    if (fx !== tx || fy !== ty) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(212,168,67,.7)';
+      ctx.lineWidth = Math.max(2, cellSize * 0.045);
+      ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tx, ty); ctx.stroke();
+      const angle = Math.atan2(ty - fy, tx - fx);
+      const headLen = cellSize * 0.22;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - headLen * Math.cos(angle - 0.42), ty - headLen * Math.sin(angle - 0.42));
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - headLen * Math.cos(angle + 0.42), ty - headLen * Math.sin(angle + 0.42));
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.strokeStyle = 'rgba(212,168,67,.85)';
+    ctx.lineWidth = Math.max(1.5, cellSize * 0.03);
+    ctx.strokeRect(view.lastMoveStart.c * cellSize + 2, view.lastMoveStart.r * cellSize + 2, cellSize - 4, cellSize - 4);
+    ctx.strokeRect(view.lastMoveEnd.c * cellSize + 2, view.lastMoveEnd.r * cellSize + 2, cellSize - 4, cellSize - 4);
+  }
+
+  if (view.selected) {
+    const { r, c } = view.selected;
+    let pulse = 0;
+    if (view.chainActive && view.isLive) {
+      pulse = 0.5 + 0.5 * Math.sin(now / 140);
+    }
+    ctx.fillStyle = view.chainActive
+      ? `rgba(255,120,120,${0.30 + pulse * 0.35})`
+      : 'rgba(255,209,102,.42)';
+    ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+    ctx.strokeStyle = view.chainActive
+      ? `rgba(255,${Math.floor(80 + pulse * 60)},${Math.floor(80 + pulse * 40)},${0.7 + pulse * 0.3})`
+      : '#FFD166';
+    ctx.lineWidth = Math.max(2, cellSize * (0.055 + (view.chainActive ? pulse * 0.02 : 0)));
+    ctx.strokeRect(c * cellSize + 1.5, r * cellSize + 1.5, cellSize - 3, cellSize - 3);
+  }
+
+  if (view.selected) {
+    const sel = vBoard[view.selected.r][view.selected.c];
+    if (sel && !sel.k && !sel.locked) {
+      for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+        const nr = view.selected.r + dr, nc = view.selected.c + dc;
+        if (!inBounds(nr, nc)) continue;
+        const p = vBoard[nr][nc];
+        if (!p || p.p === sel.p || !p.k || p.locked) continue;
+        const landR = view.selected.r + 2*dr, landC = view.selected.c + 2*dc;
+        if (!inBounds(landR, landC) || vBoard[landR][landC]) continue;
+        if (!canPawnCaptureKing(sel.p, nr, nc)) {
+          const kx = nc * cellSize + cellSize / 2, ky = nr * cellSize + cellSize / 2;
+          ctx.beginPath(); ctx.arc(kx, ky, cellSize * 0.44, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(160,160,160,.75)';
+          ctx.lineWidth = Math.max(2, cellSize * 0.028);
+          ctx.setLineDash([Math.max(4, cellSize*0.08), Math.max(3, cellSize*0.06)]);
+          ctx.stroke(); ctx.setLineDash([]);
+        }
+      }
+    }
+  }
+
+  if (view.pendingOwnJump) {
+    const dt = view.pendingOwnJump.move.to;
+    const dcx = dt.c * cellSize + cellSize / 2, dcy = dt.r * cellSize + cellSize / 2;
+    ctx.beginPath(); ctx.arc(dcx, dcy, cellSize * 0.14, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,160,50,.55)'; ctx.fill();
+    const jv = view.pendingOwnJump.move.jumpOver;
+    const jvx = jv.c * cellSize + cellSize / 2, jvy = jv.r * cellSize + cellSize / 2;
+    ctx.beginPath(); ctx.arc(jvx, jvy, cellSize * 0.44, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,160,50,.85)';
+    ctx.lineWidth = Math.max(2, cellSize * 0.04); ctx.stroke();
+    for (const opt of view.pendingOwnJump.retreatOptions) {
+      const ox = opt.c * cellSize + cellSize / 2, oy = opt.r * cellSize + cellSize / 2;
+      ctx.beginPath(); ctx.arc(ox, oy, cellSize * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,160,50,.95)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(ox, oy, cellSize * 0.2, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(2, cellSize * 0.04); ctx.stroke();
+    }
+  } else {
+    for (const m of view.legalMoves) {
+      const cx = m.to.c * cellSize + cellSize / 2, cy = m.to.r * cellSize + cellSize / 2;
+      let col;
+      if (m.kingOrtho) col = 'rgba(255,80,200,.95)';
+      else if (m.ortho && m.type === 'capture') col = 'rgba(255,120,40,.95)';
+      else if (m.type === 'capture') col = 'rgba(224,82,82,.9)';
+      else if (m.type === 'jumpOwn') col = 'rgba(255,160,50,.85)';
+      else if (m.type === 'jumpOpponent') col = 'rgba(150,100,255,.85)';
+      else col = 'rgba(60,180,120,.65)';
+      ctx.beginPath(); ctx.arc(cx, cy, cellSize * 0.14, 0, Math.PI * 2);
+      ctx.fillStyle = col; ctx.fill();
+      const jumpAt = m.jumpOver || m.captured;
+      if (jumpAt) {
+        const jx = jumpAt.c * cellSize + cellSize / 2, jy = jumpAt.r * cellSize + cellSize / 2;
+        ctx.beginPath(); ctx.arc(jx, jy, cellSize * 0.44, 0, Math.PI * 2);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = Math.max(2, cellSize * 0.04); ctx.stroke();
+      }
+    }
+  }
+
+  // ── ANIMACIONES ──
+  if (view.isLive && animState.fading.length) {
+    for (const f of animState.fading) {
+      const t = Math.min(1, (now - f.start) / f.dur);
+      if (t >= 1) continue;
+      const cx = f.c * cellSize + cellSize / 2;
+      const cy = f.r * cellSize + cellSize / 2;
+      const flashR = cellSize * (0.35 + t * 0.95);
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, flashR);
+      grad.addColorStop(0, `rgba(255, 255, 255, ${(1 - t) * 0.95})`);
+      grad.addColorStop(0.45, `rgba(255, 220, 130, ${(1 - t) * 0.75})`);
+      grad.addColorStop(0.85, `rgba(255, 100, 60, ${(1 - t) * 0.35})`);
+      grad.addColorStop(1, 'rgba(255, 80, 40, 0)');
+      ctx.beginPath();
+      ctx.arc(cx, cy, flashR, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - t * 1.15);
+      drawPiece(cx, cy, f.piece, true);
+      ctx.restore();
+    }
+  }
+
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = vBoard[r][c];
+    if (!p) continue;
+    if (view.isLive && p._anim) {
+      const t = Math.min(1, (now - p._anim.start) / p._anim.dur);
+      if (t >= 1) {
+        delete p._anim;
+        drawPiece(c * cellSize + cellSize / 2, r * cellSize + cellSize / 2, p, !view.isLive);
+      } else {
+        const eased = easeOutCubic(t);
+        const fromR = p._anim.fromR, fromC = p._anim.fromC;
+        const gcx = (fromC + (c - fromC) * eased) * cellSize + cellSize / 2;
+        const gcy = (fromR + (r - fromR) * eased) * cellSize + cellSize / 2;
+        drawPiece(gcx, gcy, p, !view.isLive);
+      }
+    } else {
+      drawPiece(c * cellSize + cellSize / 2, r * cellSize + cellSize / 2, p, !view.isLive);
+    }
+  }
+
+  if (view.isLive && animState.bursts.length) {
+    for (const burst of animState.bursts) {
+      const t = Math.min(1, (now - burst.start) / burst.dur);
+      if (t >= 1) continue;
+      const fade = 1 - t;
+      ctx.save();
+      for (const p of burst.particles) {
+        const x = p.x + p.vx * t * 34;
+        const y = p.y + p.vy * t * 34 + 60 * t * t;
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = p.color;
+        ctx.translate(x, y);
+        ctx.rotate(p.rot + p.vr * t * 3);
+        if (p.shape === 'star') {
+          ctx.beginPath();
+          for (let i = 0; i < 10; i++) {
+            const rr = (i % 2 === 0) ? p.size : p.size * 0.45;
+            const ang = (Math.PI * i) / 5 - Math.PI / 2;
+            const sx = Math.cos(ang) * rr;
+            const sy = Math.sin(ang) * rr;
+            if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+          }
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size * (1 - t * 0.5), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        const dpr = window.devicePixelRatio || 1;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      ctx.restore();
+    }
+  }
+
+  if (view.isLive && gameOver && animState.victoryTime) {
+    const elapsed = now - animState.victoryTime;
+    const t = Math.min(1, elapsed / 600);
+    const bandH = Math.min(py * 0.42, cellSize * 3.2);
+    const bandY = py / 2 - bandH / 2;
+
+    ctx.save();
+    ctx.globalAlpha = t * 0.72;
+    const bandGrad = ctx.createLinearGradient(0, bandY, 0, bandY + bandH);
+    bandGrad.addColorStop(0, 'rgba(4, 6, 10, 0)');
+    bandGrad.addColorStop(0.15, 'rgba(10, 14, 22, 0.92)');
+    bandGrad.addColorStop(0.5, 'rgba(10, 14, 22, 0.95)');
+    bandGrad.addColorStop(0.85, 'rgba(10, 14, 22, 0.92)');
+    bandGrad.addColorStop(1, 'rgba(4, 6, 10, 0)');
+    ctx.fillStyle = bandGrad;
+    ctx.fillRect(0, bandY, px, bandH);
+
+    ctx.globalAlpha = t;
+    const title = winner === P1 ? '¡GANA EL CLARO!' : winner === P2 ? '¡GANA EL OSCURO!' : 'TABLAS';
+    const titleColor = winner === null ? '#d0b8ff' : '#ffe9a8';
+    const titleSize = Math.floor(Math.min(cellSize * 0.72, 56));
+    ctx.font = `bold ${titleSize}px 'Segoe UI', system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = winner === null ? 'rgba(170, 130, 230, 0.85)' : 'rgba(255, 200, 100, 0.9)';
+    ctx.shadowBlur = 22;
+    ctx.fillStyle = titleColor;
+    ctx.fillText(title, px / 2, py / 2 - titleSize * 0.25);
+    ctx.shadowBlur = 0;
+
+    let reason = '';
+    if (winReason === 'return') reason = 'Retorno victorioso';
+    else if (winReason === 'domination') reason = 'Dominación';
+    else if (winReason === 'noPawns') reason = 'Sin estrellas fugaces';
+    else if (winReason === 'noPawnsFirstCoronation') reason = 'Primera coronación';
+    else if (winReason === 'noPawnsDraw') reason = 'Empate técnico';
+    else if (winReason === 'noMoves') reason = 'Rival sin movimientos';
+    if (reason) {
+      const reasonSize = Math.floor(Math.min(cellSize * 0.30, 22));
+      ctx.font = `600 ${reasonSize}px 'Segoe UI', system-ui, sans-serif`;
+      ctx.fillStyle = '#e8e6e1';
+      ctx.globalAlpha = t * 0.9;
+      ctx.fillText(reason, px / 2, py / 2 + titleSize * 0.55);
+    }
+    ctx.restore();
+  }
+
+  if (view.isLive && animState.confetti.length) {
+    for (const c of animState.confetti) {
+      const alpha = Math.min(1, c.life * 1.8);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rot);
+      ctx.fillStyle = c.color;
+      if (c.shape === 'rect') {
+        ctx.fillRect(-c.size / 2, -c.size / 4, c.size, c.size / 2);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, c.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  drawCoordinates();
+  ctx.strokeStyle = 'rgba(0,0,0,.5)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(0, 0, px, py);
+}
+
+function drawCoordinates() {
+  const fontSize = Math.max(11, Math.min(20, Math.floor(cellSize * 0.30)));
+  const pad      = Math.max(3, Math.floor(cellSize * 0.07));
+  const outlineW = Math.max(2, Math.floor(cellSize * 0.055));
+
+  ctx.save();
+  ctx.font         = `800 ${fontSize}px 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif`;
+  ctx.lineJoin     = 'round';
+  ctx.miterLimit   = 2;
+  ctx.lineWidth    = outlineW;
+  ctx.strokeStyle  = 'rgba(10, 14, 20, 0.95)';
+  ctx.fillStyle    = '#ffe066';
+
+  // Letras de columna (a, b, c…) — esquina inferior derecha
+  ctx.textAlign    = 'right';
+  ctx.textBaseline = 'bottom';
+  for (let c = 0; c < COLS; c++) {
+    const letter = String.fromCharCode(97 + c);
+    const x = c * cellSize + cellSize - pad;
+    const y = (ROWS - 1) * cellSize + cellSize - pad;
+    ctx.strokeText(letter, x, y);
+    ctx.fillText(letter, x, y);
+  }
+
+  // Números de fila — esquina superior izquierda
+  ctx.textAlign    = 'left';
+  ctx.textBaseline = 'top';
+  for (let r = 0; r < ROWS; r++) {
+    const num = String(ROWS - r);
+    const x = pad;
+    const y = r * cellSize + pad;
+    ctx.strokeText(num, x, y);
+    ctx.fillText(num, x, y);
+  }
+
+  ctx.restore();
+}
+
+function drawPiece(cx, cy, piece, skipKingRing = false) {
+  const rad = cellSize * 0.395;
+  const isWhite = piece.p === P1;
+  const theme = PIECE_THEMES[pieceTheme] || PIECE_THEMES.marmol;
+  const colors = isWhite ? theme.P1 : theme.P2;
+  ctx.beginPath(); ctx.arc(cx, cy + rad * 0.14, rad, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fill();
+  const grad = ctx.createRadialGradient(cx - rad * 0.32, cy - rad * 0.35, rad * 0.1, cx, cy, rad * 1.02);
+  grad.addColorStop(0, colors.g0);
+  grad.addColorStop(0.55, colors.g1);
+  grad.addColorStop(1, colors.g2);
+  ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.lineWidth = Math.max(1.2, cellSize * 0.028);
+  ctx.strokeStyle = colors.stroke; ctx.stroke();
+  if (piece.k) {
+    drawStar(cx, cy, rad, !!piece.locked);
+    if (!skipKingRing && kingMoveStreak[piece.p] >= 2 && !isKingLimitExempt(piece.p)) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, rad * 0.95, 0, Math.PI * 2);
+      ctx.setLineDash([Math.max(2, cellSize * 0.055), Math.max(2, cellSize * 0.035)]);
+      ctx.lineWidth = Math.max(1.6, cellSize * 0.032);
+      ctx.strokeStyle = 'rgba(255,140,40,.95)';
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  } else {
+    drawShootingStar(cx, cy, rad, piece.p);
+  }
+}
+
+function drawShootingStar(cx, cy, rad, player) {
+  const dir = player === P1 ? -1 : 1;
+  const isWhite = player === P1;
+  const headY = cy + dir * rad * 0.42;
+  const starR = rad * 0.36;
+  const tailStartY = headY - dir * rad * 0.10;
+  const tailEndY = cy - dir * rad * 0.86;
+  const tailBaseW = rad * 0.26;
+  const tailBaseColor = isWhite ? 'rgba(255, 210, 60,' : 'rgba(255, 100, 20,';
+  const headBright = isWhite ? '#fffce8' : '#ffe4b0';
+  const headMid    = isWhite ? '#ffd24a' : '#ff7020';
+  const headEdge   = isWhite ? '#b88010' : '#901800';
+  const tailGrad = ctx.createLinearGradient(cx, tailStartY, cx, tailEndY);
+  tailGrad.addColorStop(0, tailBaseColor + '0.92)');
+  tailGrad.addColorStop(0.45, tailBaseColor + '0.55)');
+  tailGrad.addColorStop(1, tailBaseColor + '0)');
+  ctx.beginPath();
+  ctx.moveTo(cx - tailBaseW, tailStartY);
+  ctx.quadraticCurveTo(cx - tailBaseW * 0.65, tailStartY - dir * rad * 0.55, cx, tailEndY);
+  ctx.quadraticCurveTo(cx + tailBaseW * 0.65, tailStartY - dir * rad * 0.55, cx + tailBaseW, tailStartY);
+  ctx.closePath();
+  ctx.fillStyle = tailGrad;
+  ctx.fill();
+  const coreGrad = ctx.createLinearGradient(cx, tailStartY, cx, tailStartY - dir * rad * 0.6);
+  coreGrad.addColorStop(0, isWhite ? 'rgba(255,255,220,0.85)' : 'rgba(255,235,150,0.85)');
+  coreGrad.addColorStop(1, 'rgba(255,255,200,0)');
+  ctx.beginPath();
+  ctx.moveTo(cx - tailBaseW * 0.38, tailStartY);
+  ctx.quadraticCurveTo(cx, tailStartY - dir * rad * 0.35, cx, tailStartY - dir * rad * 0.65);
+  ctx.quadraticCurveTo(cx, tailStartY - dir * rad * 0.35, cx + tailBaseW * 0.38, tailStartY);
+  ctx.closePath();
+  ctx.fillStyle = coreGrad;
+  ctx.fill();
+  const rIn = starR * 0.44;
+  const points = 5;
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const rr = (i % 2 === 0) ? starR : rIn;
+    const ang = -Math.PI / 2 + i * (Math.PI / points);
+    const x = cx + Math.cos(ang) * rr;
+    const y = headY + Math.sin(ang) * rr;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  const headGrad = ctx.createRadialGradient(cx - starR * 0.2, headY - starR * 0.3, starR * 0.05, cx, headY, starR * 1.05);
+  headGrad.addColorStop(0, headBright);
+  headGrad.addColorStop(0.55, headMid);
+  headGrad.addColorStop(1, headEdge);
+  ctx.fillStyle = headGrad;
+  ctx.fill();
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(1, rad * 0.04);
+  ctx.strokeStyle = headEdge;
+  ctx.stroke();
+}
+
+function drawStar(cx, cy, rad, isLocked) {
+  const rOut = rad * 0.92;
+  const rIn  = rOut * 0.44;
+  const points = 5;
+  const starPath = () => {
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const r = (i % 2 === 0) ? rOut : rIn;
+      const ang = -Math.PI / 2 + i * (Math.PI / points);
+      const x = cx + Math.cos(ang) * r;
+      const y = cy + Math.sin(ang) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  };
+  const starGrad = ctx.createLinearGradient(cx, cy - rOut, cx, cy + rOut);
+  starGrad.addColorStop(0,   '#fff4c8');
+  starGrad.addColorStop(0.35,'#f0cf78');
+  starGrad.addColorStop(0.7, '#d4a843');
+  starGrad.addColorStop(1,   '#8a6a1c');
+  starPath();
+  ctx.fillStyle = starGrad;
+  ctx.fill();
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(1, cellSize * 0.022);
+  ctx.strokeStyle = '#6a4a14';
+  starPath();
+  ctx.stroke();
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.beginPath();
+  ctx.arc(cx - rOut * 0.10, cy - rOut * 0.42, rOut * 0.14, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.restore();
+  if (isLocked) drawLock(cx, cy, rad);
+}
+
+function drawLock(cx, cy, rad) {
+  const bgR = rad * 0.40;
+  ctx.beginPath();
+  ctx.arc(cx, cy, bgR, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(40, 20, 80, 0.92)';
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.4, rad * 0.065);
+  ctx.strokeStyle = 'rgba(176, 136, 255, 0.9)';
+  ctx.stroke();
+  const lockColor = '#e8d8ff';
+  const bodyW = rad * 0.36, bodyH = rad * 0.30;
+  const bodyTopY = cy - bodyH * 0.05;
+  const bodyX = cx - bodyW / 2;
+  const cornerR = rad * 0.05;
+  const shackleR = bodyW * 0.34;
+  const shackleThick = Math.max(1.8, rad * 0.085);
+  ctx.beginPath();
+  ctx.arc(cx, bodyTopY, shackleR, Math.PI, 2 * Math.PI);
+  ctx.lineWidth = shackleThick;
+  ctx.strokeStyle = lockColor;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(bodyX + cornerR, bodyTopY);
+  ctx.lineTo(bodyX + bodyW - cornerR, bodyTopY);
+  ctx.quadraticCurveTo(bodyX + bodyW, bodyTopY, bodyX + bodyW, bodyTopY + cornerR);
+  ctx.lineTo(bodyX + bodyW, bodyTopY + bodyH - cornerR);
+  ctx.quadraticCurveTo(bodyX + bodyW, bodyTopY + bodyH, bodyX + bodyW - cornerR, bodyTopY + bodyH);
+  ctx.lineTo(bodyX + cornerR, bodyTopY + bodyH);
+  ctx.quadraticCurveTo(bodyX, bodyTopY + bodyH, bodyX, bodyTopY + bodyH - cornerR);
+  ctx.lineTo(bodyX, bodyTopY + cornerR);
+  ctx.quadraticCurveTo(bodyX, bodyTopY, bodyX + cornerR, bodyTopY);
+  ctx.closePath();
+  ctx.fillStyle = lockColor;
+  ctx.fill();
+  const keyholeR = rad * 0.055;
+  const keyholeY = bodyTopY + bodyH * 0.42;
+  ctx.beginPath();
+  ctx.arc(cx, keyholeY, keyholeR, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(40, 20, 80, 0.95)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx - keyholeR * 0.7, keyholeY + keyholeR * 0.2);
+  ctx.lineTo(cx + keyholeR * 0.7, keyholeY + keyholeR * 0.2);
+  ctx.lineTo(cx + keyholeR * 0.35, keyholeY + keyholeR * 1.8);
+  ctx.lineTo(cx - keyholeR * 0.35, keyholeY + keyholeR * 1.8);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(40, 20, 80, 0.95)';
+  ctx.fill();
+}
+
+function handleClick(e) {
+  if (replayActive) return;
+  if (gameOver || aiThinking) return;
+  if (isAIPlayer(turn)) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  const c = Math.floor(x / (rect.width / COLS));
+  const r = Math.floor(y / (rect.height / ROWS));
+  if (!inBounds(r, c)) return;
+
+  if (editMode) {
+    if (editTool === 'empty') board[r][c] = null;
+    else if (editTool === 'wP') board[r][c] = { p: P1, k: false };
+    else if (editTool === 'wK') board[r][c] = { p: P1, k: true };
+    else if (editTool === 'wLK') board[r][c] = { p: P1, k: true, locked: true };
+    else if (editTool === 'gP') board[r][c] = { p: P2, k: false };
+    else if (editTool === 'gK') board[r][c] = { p: P2, k: true };
+    else if (editTool === 'gLK') board[r][c] = { p: P2, k: true, locked: true };
+    draw(); updateStatus(); return;
+  }
+  if (pendingOwnJump) {
+    const opt = pendingOwnJump.retreatOptions.find(o => o.r === r && o.c === c);
+    if (opt) { executeOwnJumpWithRetreat(pendingOwnJump.move, opt); return; }
+    pendingOwnJump = null;
+  }
+  if (chainActive) {
+    const move = legalMoves.find(m => m.to.r === r && m.to.c === c);
+    if (move) executeMove(move);
+    return;
+  }
+  if (selected) {
+    const move = legalMoves.find(m => m.to.r === r && m.to.c === c);
+    if (move) {
+      if (move.type === 'jumpOwn') {
+        if (move.retreatOptions.length === 1) executeOwnJumpWithRetreat(move, move.retreatOptions[0]);
+        else { pendingOwnJump = { move, retreatOptions: move.retreatOptions }; startAnimationLoop(); draw(); updateStatus(); }
+        return;
+      }
+      executeMove(move); return;
+    }
+  }
+  const piece = board[r][c];
+  if (piece && piece.p === turn && !piece.locked) {
+    chainFirstWasForward = null;
+    chainHasBackwardDiag = false;
+    chainOrthoDone = false;
+    chainCaptureCount = 0;
+    const usable = getPieceMoves(r, c);
+    if (usable.length === 0) { selected = null; legalMoves = []; pendingOwnJump = null; draw(); updateStatus(); return; }
+    selected = { r, c }; legalMoves = usable; pendingOwnJump = null;
+    draw(); updateStatus(); return;
+  }
+  selected = null; legalMoves = []; pendingOwnJump = null;
+  chainFirstWasForward = null; chainHasBackwardDiag = false; chainOrthoDone = false; chainCaptureCount = 0;
+  draw(); updateStatus();
+}
+canvas.addEventListener('click', handleClick);
+
+// ── DOM refs ──
+const statusEl = document.getElementById('status');
+const statusTextEl = document.getElementById('statusText');
+const statusDotEl = document.getElementById('statusDot');
+const subtitleEl = document.getElementById('subtitle');
+const btnNew = document.getElementById('btnNew');
+const btnEdit = document.getElementById('btnEdit');
+const btnStopAI = document.getElementById('btnStopAI');
+const btnClearBoard = document.getElementById('btnClearBoard');
+const btnUndo = document.getElementById('btnUndo');
+const btnRedo = document.getElementById('btnRedo');
+const btnExport = document.getElementById('btnExport');
+const btnImport = document.getElementById('btnImport');
+const btnExportPNG = document.getElementById('btnExportPNG');
+const fileInput = document.getElementById('fileInput');
+const editPanel = document.getElementById('editPanel');
+const palette = document.getElementById('palette');
+const selSize = document.getElementById('selSize');
+const selDensity = document.getElementById('selDensity');
+const selMode = document.getElementById('selMode');
+const selDiff = document.getElementById('selDiff');
+
+const btnReplayFirst = document.getElementById('btnReplayFirst');
+const btnReplayPrev  = document.getElementById('btnReplayPrev');
+const btnReplayNext  = document.getElementById('btnReplayNext');
+const btnReplayLast  = document.getElementById('btnReplayLast');
+const historyListEl  = document.getElementById('historyList');
+
+const btnToggleRules = document.getElementById('btnToggleRules');
+const rulesInfo = document.getElementById('rulesInfo');
+const btnToggleExtra = document.getElementById('btnToggleExtra');
+const extraInfo = document.getElementById('extraInfo');
+
+if (btnReplayFirst) btnReplayFirst.addEventListener('click', replayFirst);
+if (btnReplayPrev)  btnReplayPrev.addEventListener('click', replayPrev);
+if (btnReplayNext)  btnReplayNext.addEventListener('click', replayNext);
+if (btnReplayLast)  btnReplayLast.addEventListener('click', replayLast);
+if (historyListEl) {
+  historyListEl.addEventListener('click', (e) => {
+    const entryEl = e.target.closest('.history-entry');
+    if (!entryEl) return;
+    const ply = parseInt(entryEl.dataset.ply, 10);
+    if (!Number.isFinite(ply)) return;
+    goToReplayPly(ply);
+  });
+}
+
+function syncScrollLock() {
+  const open = rulesInfo.classList.contains('expanded') || extraInfo.classList.contains('expanded');
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function setRulesCollapsed(collapsed) {
+  rulesInfo.classList.toggle('collapsed', collapsed);
+  rulesInfo.classList.toggle('expanded', !collapsed);
+  btnToggleRules.textContent = collapsed ? 'Mostrar reglas' : '✕  Ocultar reglas  (Esc)';
+  if (!collapsed && extraInfo.classList.contains('expanded')) setExtraCollapsed(true);
+  syncScrollLock();
+}
+function setExtraCollapsed(collapsed) {
+  extraInfo.classList.toggle('collapsed', collapsed);
+  extraInfo.classList.toggle('expanded', !collapsed);
+  btnToggleExtra.textContent = collapsed ? 'Mostrar detalles' : '✕  Ocultar detalles  (Esc)';
+  if (!collapsed && rulesInfo.classList.contains('expanded')) setRulesCollapsed(true);
+  syncScrollLock();
+}
+setRulesCollapsed(true);
+setExtraCollapsed(true);
+
+btnToggleRules.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setRulesCollapsed(rulesInfo.classList.contains('expanded'));
+});
+btnToggleExtra.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setExtraCollapsed(extraInfo.classList.contains('expanded'));
+});
+rulesInfo.addEventListener('click', (e) => { if (e.target === rulesInfo) setRulesCollapsed(true); });
+extraInfo.addEventListener('click', (e) => { if (e.target === extraInfo) setExtraCollapsed(true); });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' || e.key === 'Esc') {
+    if (rulesInfo.classList.contains('expanded')) setRulesCollapsed(true);
+    if (extraInfo.classList.contains('expanded')) setExtraCollapsed(true);
+  }
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+    e.preventDefault(); undoMove();
+  } else if (ctrl && ((e.key === 'y' || e.key === 'Y') || (e.shiftKey && (e.key === 'z' || e.key === 'Z')))) {
+    e.preventDefault(); redoMove();
+  } else if (ctrl && (e.key === 'ArrowLeft' || e.key === 'Left')) {
+    e.preventDefault(); replayPrev();
+  } else if (ctrl && (e.key === 'ArrowRight' || e.key === 'Right')) {
+    e.preventDefault(); replayNext();
+  }
+});
+
+function updateSubtitle() {
+  const piecesPerSide = initialPiecesPerSide(ROWS, COLS, density);
+  const totalPieces = piecesPerSide * 2;
+  const casillas = ROWS * COLS;
+  const pct = ((totalPieces / casillas) * 100).toFixed(1);
+  subtitleEl.textContent = `${COLS}×${ROWS} · ${casillas} casillas · ${piecesPerSide} vs ${piecesPerSide} (${pct} %)`;
+}
+
+function updateStatus() {
+  renderHistory();
+  updateReplayHighlight();
+  updateReplayButtons();
+
+  const canUndo = !editMode && !replayActive && (undoStack.length > 0 || turnStartSnapshot !== null);
+  const canRedo = !editMode && !replayActive && redoStack.length > 0 && !aiThinking && !turnStartSnapshot;
+  if (btnUndo) btnUndo.disabled = !canUndo;
+  if (btnRedo) btnRedo.disabled = !canRedo;
+  btnStopAI.disabled = !aiThinking;
+
+  const view = getViewState();
+  const { w, g, kw, kg, lw, lg } = countPieces(view.board);
+  document.getElementById('fugacesWhite').textContent = w - kw;
+  document.getElementById('fugacesGreen').textContent = g - kg;
+  document.getElementById('errantWhite').textContent = kw - lw;
+  document.getElementById('errantGreen').textContent = kg - lg;
+  document.getElementById('fixedWhite').textContent = lw;
+  document.getElementById('fixedGreen').textContent = lg;
+
+  const noPawns = !hasAnyPawnsOnBoard();
+  const sW = kingMoveStreak[P1], sG = kingMoveStreak[P2];
+  const streakWhiteEl = document.getElementById('streakWhite');
+  const streakGreenEl = document.getElementById('streakGreen');
+  if (!replayActive && sW > 0) { streakWhiteEl.style.display = ''; document.getElementById('streakValWhite').textContent = sW; }
+  else streakWhiteEl.style.display = 'none';
+  if (!replayActive && sG > 0) { streakGreenEl.style.display = ''; document.getElementById('streakValGreen').textContent = sG; }
+  else streakGreenEl.style.display = 'none';
+
+  statusEl.classList.remove('over', 'choose', 'must', 'chain', 'edit', 'kingblock', 'busy', 'replay');
+  if (editMode) {
+    statusEl.classList.add('edit');
+    statusDotEl.className = 'dot edit';
+    statusTextEl.textContent = 'Modo edición — coloca piezas';
+    return;
+  }
+  if (replayActive) {
+    statusEl.classList.add('replay');
+    statusDotEl.className = 'dot replay';
+    const N = moveHistory.length;
+    statusTextEl.textContent = `Replay · ply ${replayIndex}/${N} · ▶/⏭ para volver al presente`;
+    return;
+  }
+  if (gameOver) {
+    statusEl.classList.add('over');
+    statusDotEl.className = 'dot gold';
+    if (winReason === 'return') statusTextEl.textContent = winner === P1 ? '🏆 ¡Victoria por retorno! Gana el claro' : '🏆 ¡Victoria por retorno! Gana el oscuro';
+    else if (winReason === 'domination') statusTextEl.textContent = winner === P1 ? '🏆 ¡Dominación! Gana el claro' : '🏆 ¡Dominación! Gana el oscuro';
+    else if (winReason === 'noPawns') statusTextEl.textContent = winner === P1 ? '🏆 Sin fugaces — gana el claro' : '🏆 Sin fugaces — gana el oscuro';
+    else if (winReason === 'noPawnsFirstCoronation') statusTextEl.textContent = winner === P1 ? '🏆 Primera coronación. Claro' : '🏆 Primera coronación. Oscuro';
+    else if (winReason === 'noPawnsDraw') statusTextEl.textContent = '⚖️ Tablas';
+    else if (winReason === 'noMoves') statusTextEl.textContent = winner === P1 ? '🏆 Rival sin movimientos — gana el claro' : '🏆 Rival sin movimientos — gana el oscuro';
+    else statusTextEl.textContent = winner === P1 ? '🏆 ¡Gana el claro!' : winner === P2 ? '🏆 ¡Gana el oscuro!' : '⚖️ Tablas';
+    return;
+  }
+  if (aiThinking) {
+    statusEl.classList.add('busy');
+    statusDotEl.className = 'dot busy';
+    statusTextEl.textContent = 'La IA está pensando…';
+    return;
+  }
+  if (pendingOwnJump) {
+    statusEl.classList.add('choose');
+    statusDotEl.className = 'dot choose';
+    statusTextEl.textContent = 'Elige hacia dónde retrocede la estrella fugaz saltada';
+    return;
+  }
+  if (chainActive) {
+    statusEl.classList.add('chain');
+    statusDotEl.className = 'dot capture';
+    const chainPiece = selected ? board[selected.r][selected.c] : null;
+    const isKingChain = !!(chainPiece && chainPiece.k);
+    const directionTag = isKingChain ? ' · 8 direcciones' : (isChainOrthoEnabled() ? ' · ortogonal ACTIVA' : '');
+    const countTag = !isKingChain && chainCaptureCount > 0 ? ` · ${chainCaptureCount} capt.` : '';
+    statusTextEl.textContent = `Turno del ${playerLabel(turn)} · cadena${directionTag}${countTag}`;
+    return;
+  }
+  const mustCapture = playerHasCaptures(turn);
+  if (mustCapture) {
+    statusEl.classList.add('must');
+    statusDotEl.className = 'dot capture';
+    statusTextEl.textContent = `Turno del ${playerLabel(turn)} · ¡CAPTURA OBLIGATORIA!`;
+    return;
+  }
+  if (kingMoveStreak[turn] >= 2 && !isKingLimitExempt(turn)) {
+    statusEl.classList.add('kingblock');
+    statusDotEl.className = 'dot kingblock';
+    statusTextEl.textContent = noPawns
+      ? `Turno del ${playerLabel(turn)} · estrellas bloqueadas (2 turnos)`
+      : `Turno del ${playerLabel(turn)} · estrellas bloqueadas — juega una estrella fugaz`;
+    return;
+  }
+  if (kingMoveStreak[turn] >= 2 && isKingLimitExempt(turn)) {
+    statusDotEl.className = 'dot ' + (turn === P1 ? 'white' : 'black');
+    statusTextEl.textContent = `Turno del ${playerLabel(turn)} · estrellas libres`;
+    return;
+  }
+  statusDotEl.className = 'dot ' + (turn === P1 ? 'white' : 'black');
+  statusTextEl.textContent = `Turno del ${playerLabel(turn)}`;
+}
+
+function inferFirstCoronationFromBoard() {
+  let p1 = false, p2 = false;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const p = board[r][c];
+    if (!p || !p.k || p.locked) continue;
+    if (p.p === P1) p1 = true;
+    if (p.p === P2) p2 = true;
+  }
+  if (p1 && !p2) firstNormalCoronationPlayer = P1;
+  else if (p2 && !p1) firstNormalCoronationPlayer = P2;
+}
+
+btnNew.addEventListener('click', () => {
+  if (editMode) {
+    editMode = false; editPanel.style.display = 'none';
+    btnEdit.textContent = 'Editar tablero'; btnEdit.classList.remove('edit-active');
+  }
+  initBoard();
+  draw(); updateStatus();
+  maybeStartAITurn();
+});
+
+btnEdit.addEventListener('click', () => {
+  editMode = !editMode;
+  if (editMode) {
+    editPanel.style.display = 'block';
+    btnEdit.textContent = 'Terminar edición';
+    btnEdit.classList.add('edit-active');
+    selected = null; legalMoves = []; pendingOwnJump = null; chainActive = false;
+    gameOver = false; winner = null; winReason = null;
+    replayActive = false;
+    clearAnimations();
+    draw(); updateStatus();
+  } else {
+    editPanel.style.display = 'none';
+    btnEdit.textContent = 'Editar tablero';
+    btnEdit.classList.remove('edit-active');
+    resetGameState();
+    inferFirstCoronationFromBoard();
+    initialBoardForReplay = board.map(row => row.map(p => p ? { ...p } : null));
+    rebuildReplaySnapshots();
+    replayIndex = 0;
+    if (checkKingDomination()) { draw(); updateStatus(); return; }
+    if (checkNoPawns()) { draw(); updateStatus(); return; }
+    if (!hasAnyMoves(P1)) {
+      gameOver = true; winner = P2; winReason = 'noMoves';
+      draw(); updateStatus(); return;
+    }
+    draw(); updateStatus();
+    maybeStartAITurn();
+  }
+});
+
+btnStopAI.addEventListener('click', () => {
+  if (!aiThinking && !turnStartSnapshot) return;
+  aiStopRequested = true;
+  activeTurnId = 0;
+  if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+  aiThinking = false;
+  if (turnStartSnapshot) { restoreSnapshot(turnStartSnapshot); redoStack = []; }
+  updateStatus(); draw();
+});
+
+btnUndo.addEventListener('click', undoMove);
+btnRedo.addEventListener('click', redoMove);
+
+btnExport.addEventListener('click', () => {
+  if (!isSafeToSave()) { showToast('Espera a que termine la jugada', 'error'); return; }
+  exportGame();
+});
+btnImport.addEventListener('click', () => {
+  if (!isSafeToSave()) { showToast('Espera a que termine la jugada', 'error'); return; }
+  fileInput.value = '';
+  fileInput.click();
+});
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files?.[0];
+  if (!file) return;
+  importGameFromFile(file);
+});
+btnExportPNG.addEventListener('click', exportPNG);
+
+palette.addEventListener('click', (e) => {
+  const btn = e.target.closest('.tool');
+  if (!btn) return;
+  editTool = btn.dataset.tool;
+  palette.querySelectorAll('.tool').forEach(b => b.classList.toggle('active', b === btn));
+});
+
+btnClearBoard.addEventListener('click', () => {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) board[r][c] = null;
+  draw(); updateStatus();
+});
+
+selSize.addEventListener('change', () => {
+  if (editMode) { editMode = false; editPanel.style.display = 'none'; btnEdit.textContent = 'Editar tablero'; btnEdit.classList.remove('edit-active'); }
+  replayActive = false;
+  const v = selSize.value;
+  if (v === '8') { ROWS = 8; COLS = 8; }
+  else if (v === '10') { ROWS = 10; COLS = 10; }
+  else if (v === '10x8') { ROWS = 8; COLS = 10; }
+  updateSubtitle(); initBoard(); updateStatus(); resize();
+  maybeStartAITurn();
+});
+selDensity.addEventListener('change', () => {
+  if (editMode) { editMode = false; editPanel.style.display = 'none'; btnEdit.textContent = 'Editar tablero'; btnEdit.classList.remove('edit-active'); }
+  replayActive = false;
+  density = selDensity.value;
+  updateSubtitle(); initBoard(); updateStatus(); resize();
+  maybeStartAITurn();
+});
+selMode.addEventListener('change', () => {
+  mode = selMode.value;
+  if (editMode) { editMode = false; editPanel.style.display = 'none'; btnEdit.textContent = 'Editar tablero'; btnEdit.classList.remove('edit-active'); }
+  replayActive = false;
+  initBoard(); draw(); updateStatus();
+  maybeStartAITurn();
+});
+selDiff.addEventListener('change', () => {
+  difficulty = parseInt(selDiff.value, 10);
+});
+
+window.addEventListener('resize', resize);
+if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(document.querySelector('.board-wrap'));
+
+(function initApp() {
+  updateSubtitle();
+  initBoard();
+  updateStatus();
+  resize();
+  maybeStartAITurn();
+})();
+</script>
 </body>
 </html>
