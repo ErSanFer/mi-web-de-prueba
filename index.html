@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duelo de Estrellas - Sitio Oficial</title>
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --panel: #151b2b;
+            --text: #e2e8f0;
+            --gold: #d4a843;
+            --gold-hover: #f0c46c;
+            --accent: #3b82f6;
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: radial-gradient(circle at top right, #1a2438, var(--bg) 70%);
+            color: var(--text);
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        /* --- Navegación --- */
+        header {
+            position: sticky;
+            top: 0;
+            background: rgba(11, 15, 25, 0.85);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        nav {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--gold);
+        }
+
+        /* --- Hero (Bienvenida) --- */
+        .hero {
+            text-align: center;
+            padding: 100px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #fff, var(--gold));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-bottom: 40px;
+        }
+
+        .btn-jugar {
+            display: inline-block;
+            background: linear-gradient(180deg, var(--gold-hover), var(--gold));
+            color: #111;
+            text-decoration: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(212, 168, 67, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-jugar:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(212, 168, 67, 0.5);
+        }
+
+        /* --- Secciones --- */
+        section {
+            max-width: 900px;
+            margin: 0 auto 80px auto;
+            padding: 0 20px;
+        }
+
+        h2 {
+            font-size: 2rem;
+            color: var(--gold);
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(212, 168, 67, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .card {
+            background: var(--panel);
+            padding: 30px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .card p {
+            margin-bottom: 15px;
+        }
+
+        /* --- Piezas --- */
+        .piezas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .pieza-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .pieza-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        /* --- Contacto --- */
+        .contacto-text {
+            font-size: 1.1rem;
+            text-align: center;
+        }
+        
+        .email {
+            color: var(--gold);
+            font-weight: bold;
+            text-decoration: none;
+            font-size: 1.3rem;
+        }
+
+        .email:hover {
+            text-decoration: underline;
+        }
+
+        /* --- Footer --- */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; } /* En móviles se oculta el menú para simplificar */
+            .hero h1 { font-size: 2rem; }
+            .hero { padding: 60px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <div class="logo">Duelo de Estrellas</div>
+            <div class="nav-links">
+                <a href="#historia">Historia</a>
+                <a href="#el-juego">El Juego</a>
+                <a href="#contacto">Contacto</a>
+                <a href="juego.html" style="color: var(--gold); font-weight: bold;">Jugar</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- BIENVENIDA -->
+        <section class="hero">
+            <h1>Bienvenido al Duelo de Estrellas</h1>
+            <p>Un juego de estrategia original, nacido de un sueño de juventud y perfeccionado con los años. Descubre un nuevo desafío donde las tablas son solo el principio.</p>
+            <a href="juego.html" class="btn-jugar">▶ Jugar Ahora</a>
+        </section>
+
+        <!-- HISTORIA -->
+        <section id="historia">
+            <h2>La Historia Detrás del Juego</h2>
+            <div class="card">
+                <p>Mi nombre es <strong>Ernesto Sánchez Fernández</strong>. Nací el 6 de octubre de 1968 en un campo del municipio Chambas, en Ciego de Ávila, Cuba. Mi niñez transcurrió rodeado de árboles y cercas de alambre, donde la imaginación era mi mejor compañera.</p>
+                <p>Jugaba a las damas españolas, pero notaba que muchas partidas terminaban en tablas. Desde muy joven, una idea comenzó a rondar mi cabeza: <em>¿cómo podría cambiar eso?</em> Con los años, y tras mucho tiempo dedicado a los estudios y al trabajo, nunca dejé de pensar en esa idea.</p>
+                <p>No fue hasta los 57 años cuando decidí retomar aquel sueño de juventud. Canalicé todas esas ideas, establecí la distribución de las piezas, sus movimientos y las reglas. A las primeras versiones las llamé "Duelo de Reyes", pero finalmente las bauticé como <strong>Duelo de Estrellas</strong>. Este sitio es el resultado de años de pasión por la estrategia.</p>
+            </div>
+        </section>
+
+        <!-- EL JUEGO -->
+        <section id="el-juego">
+            <h2>Un Juego Único</h2>
+            <div class="card">
+                <p>El Duelo de Estrellas no es un ajedrez ni una dama tradicional. Es un sistema de reglas completamente nuevo diseñado para ofrecer partidas dinámicas y sin empates fáciles.</p>
+                
+                <div class="piezas-grid">
+                    <div class="pieza-item">
+                        <div class="pieza-icon">☄️</div>
+                        <h3>Estrellas Fugaces</h3>
+                        <p>Las piezas principales. Se mueven, saltan y capturan con reglas de avance y retroceso únicas.</p>
+                    </div>
+                    <div class="pieza-item">
+                        <div class="pieza-icon">⭐</div>
+                        <h3>Estrellas Errantes</h3>
+                        <p>El equivalente a las "damas coronadas". Tienen movilidad total en 8 direcciones.</p>
+                    </div>
+                    <div class="pieza-item">
+                        <div class="pieza-icon">🔒</div>
+                        <h3>Estrellas Fijas</h3>
+                        <p>Piezas inamovibles e invulnerables. Anclan la defensa y cambian el flujo del juego.</p>
+                    </div>
+                </div>
+                <br>
+                <p style="text-align: center; margin-top: 20px;">
+                    <a href="juego.html" style="color: var(--gold); font-weight: bold; text-decoration: none;">Haz clic aquí para jugar contra la IA y aprender las reglas ➔</a>
+                </p>
+            </div>
+        </section>
+
+        <!-- CONTACTO -->
+        <section id="contacto">
+            <h2>Contacto</h2>
+            <div class="card contacto-text">
+                <p>¿Tienes alguna duda sobre las reglas, comentarios o sugerencias sobre el juego?</p>
+                <p>Puedes escribirme directamente a mi correo electrónico:</p>
+                <br>
+                <a href="mailto:ernestosanchezfernandez6810@gmail.com" class="email">ernestosanchezfernandez6810@gmail.com</a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Duelo de Estrellas &copy; 2023 - 2024. Creado por Ernesto Sánchez Fernández.</p>
+        <p style="margin-top: 10px; font-size: 0.8rem; opacity: 0.7;">Desarrollado con la ayuda de IA.</p>
+    </footer>
+
+</body>
+</html>
