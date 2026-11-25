@@ -1,0 +1,2249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Duelo de Reyes — 8×8 / 10×10</title>
+<style>
+  :root{
+    --bg:#0e1014; --panel:#171a20; --panel-2:#1f232c; --line:#2c313b;
+    --text:#e8e6e1; --muted:#8b919e; --gold:#d4a843;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(circle at 30% 0%, #1a1e28 0%, #0e1014 60%, #07090c 100%);
+    color:var(--text); display:flex; align-items:center; justify-content:center;
+    padding:16px; min-height:100vh;
+  }
+  .app{display:flex; gap:22px; align-items:flex-start; max-width:1200px; width:100%; justify-content:center;}
+  .panel{
+    width:450px; flex:0 0 auto; background:linear-gradient(180deg,var(--panel),#11141a);
+    border:1px solid var(--line); border-radius:16px; padding:20px;
+    box-shadow:0 18px 50px rgba(0,0,0,.65);
+  }
+  h1{
+    margin:0 0 2px; font-size:17px; letter-spacing:.14em; text-transform:uppercase;
+    font-weight:600; line-height:1.15;
+    background:linear-gradient(90deg,#f0d9a8,#d4a843 60%,#a87c2c);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .subtitle{font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:18px;}
+  .status{
+    display:flex; align-items:center; gap:9px; background:var(--panel-2);
+    border:1px solid var(--line); border-radius:10px; padding:11px 13px;
+    font-size:13.5px; font-weight:500; min-height:44px; margin-bottom:14px;
+    transition:background .25s, border-color .25s;
+  }
+  .status.over{background:linear-gradient(90deg,rgba(212,168,67,.22),rgba(212,168,67,.06)); border-color:rgba(212,168,67,.55);}
+  .status.choose{background:linear-gradient(90deg,rgba(255,160,50,.22),rgba(255,160,50,.06)); border-color:rgba(255,160,50,.55);}
+  .status.must{background:linear-gradient(90deg,rgba(224,82,82,.18),rgba(224,82,82,.04)); border-color:rgba(224,82,82,.45);}
+  .status.chain{background:linear-gradient(90deg,rgba(255,100,100,.25),rgba(255,100,100,.08)); border-color:rgba(255,100,100,.6);}
+  .status.edit{background:linear-gradient(90deg,rgba(120,180,255,.22),rgba(120,180,255,.06)); border-color:rgba(120,180,255,.55);}
+  .status.kingblock{background:linear-gradient(90deg,rgba(255,140,40,.22),rgba(255,140,40,.06)); border-color:rgba(255,140,40,.55);}
+  .status.busy{background:linear-gradient(90deg,rgba(120,220,180,.22),rgba(120,220,180,.06)); border-color:rgba(120,220,180,.55);}
+  .dot{width:13px;height:13px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 1px rgba(0,0,0,.6) inset;}
+  .dot.white{background:radial-gradient(circle at 35% 30%,#fff,#c2c2c2);}
+  .dot.black{background:radial-gradient(circle at 35% 30%,#7ea86b,#2d4a24);}
+  .dot.gold{background:radial-gradient(circle at 35% 30%,#ffe9a8,#d4a843);}
+  .dot.idle{background:radial-gradient(circle at 35% 30%,#8b919e,#4a4f58);}
+  .dot.choose{background:radial-gradient(circle at 35% 30%,#ffd0a0,#ff8020);animation:pulse 1s infinite;}
+  .dot.capture{background:radial-gradient(circle at 35% 30%,#ff8a8a,#e05252);animation:pulse .8s infinite;}
+  .dot.edit{background:radial-gradient(circle at 35% 30%,#a0d0ff,#3f88e0);}
+  .dot.kingblock{background:radial-gradient(circle at 35% 30%,#ffb070,#e08020);}
+  .dot.busy{background:radial-gradient(circle at 35% 30%,#9fe0c0,#3fb950);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  .bottom-stack{
+    position:fixed; right:14px; bottom:12px; z-index:60;
+    display:flex; flex-direction:column; gap:8px; align-items:flex-end;
+    pointer-events:none; user-select:none;
+  }
+
+  .counters-card{
+    padding:9px 13px; border-radius:12px;
+    display:flex; flex-direction:column; gap:4px;
+    font-size:11.5px; line-height:1.45; letter-spacing:.04em;
+    background:linear-gradient(135deg, rgba(14,16,20,.93), rgba(24,34,26,.86) 55%, rgba(38,18,10,.90));
+    border:1px solid rgba(63,185,80,.32);
+    box-shadow:0 10px 30px rgba(0,0,0,.65), 0 0 20px rgba(63,185,80,.10), 0 0 26px rgba(255,94,0,.14);
+    backdrop-filter:blur(4px);
+    max-width:min(78vw, 350px);
+  }
+  .counters-card .crow{
+    display:flex; align-items:center; gap:12px; justify-content:space-between;
+  }
+  .counters-card .cname{
+    font-weight:700; font-size:10.5px; letter-spacing:.14em;
+    text-transform:uppercase; color:#cfc9bd;
+  }
+  .counters-card .cstat{
+    display:inline-flex; align-items:center; gap:3px; color:#c9d1d9;
+    white-space:nowrap;
+  }
+  .counters-card .cstat b{ color:#e0b45c; font-weight:700; }
+  .counters-card .cstat.kings b{ color:#d4a843; }
+  .counters-card .cstat.locked b{ color:#c8a0ff; font-size:11px; }
+  .counters-card .cstat.streak b{ color:#ffb070; font-size:11px; }
+
+  .credit{
+    max-width:min(78vw, 350px); padding:9px 13px; border-radius:12px;
+    text-align:right; font-size:10.5px; line-height:1.45; letter-spacing:.05em;
+    background:linear-gradient(135deg, rgba(14,16,20,.93), rgba(24,34,26,.86) 55%, rgba(38,18,10,.90));
+    border:1px solid rgba(63,185,80,.32);
+    box-shadow:0 10px 30px rgba(0,0,0,.65), 0 0 20px rgba(63,185,80,.10), 0 0 26px rgba(255,94,0,.14);
+    backdrop-filter:blur(4px);
+  }
+  .credit .t1{display:block; font-weight:700; font-size:12px; letter-spacing:.10em; text-transform:uppercase;
+    background:linear-gradient(90deg,#3fb950,#a3e635 45%,#ffb347 72%,#ff5e00);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 6px rgba(255,94,0,.25));}
+  .credit .t2{display:block; color:#c9d1d9;}
+  .credit .t2 b{font-weight:700; background:linear-gradient(90deg,#7ee787,#d4ff8a);
+    -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .credit .t3{display:block; font-size:9.5px; color:#8b919e; letter-spacing:.08em;}
+  .credit .t3 em{font-style:normal; font-weight:700;
+    background:linear-gradient(90deg,#ff9a3c,#ff5e00);
+    -webkit-background-clip:text; background-clip:text; color:transparent;}
+
+  .controls{display:flex; flex-direction:column; gap:9px; margin-bottom:16px;}
+  button{
+    font-family:inherit; font-size:13.5px; font-weight:600; letter-spacing:.04em;
+    padding:11px 14px; border-radius:9px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text); cursor:pointer; transition:.18s;
+  }
+  button:hover:not(:disabled){background:#2a3442; border-color:#4c5a6a; transform:translateY(-1px);}
+  button.primary{background:linear-gradient(180deg,#e0b45c,#c1902f); border-color:#a87c2c; color:#241a06;}
+  button.primary:hover:not(:disabled){background:linear-gradient(180deg,#f0c46c,#cf9e3d);}
+  button.edit-active{background:linear-gradient(180deg,#6aa6e0,#3f78b0); border-color:#2c5580; color:#fff;}
+  button:disabled{opacity:.45; cursor:not-allowed;}
+  #btnStopAI{
+    background:linear-gradient(180deg,#e05252,#b03030);
+    border-color:#802020; color:#fff;
+  }
+  #btnStopAI:hover:not(:disabled){
+    background:linear-gradient(180deg,#f06262,#c04040);
+    border-color:#a03030;
+  }
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:5px;}
+  select{
+    width:100%; font-family:inherit; font-size:13.5px; padding:9px 10px;
+    border-radius:9px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--text); cursor:pointer; outline:none;
+  }
+  select:focus{border-color:var(--gold);}
+  .info{margin-top:16px; padding-top:14px; border-top:1px solid var(--line); font-size:11px; line-height:1.55; color:var(--muted);}
+  .info b{color:#cfc9bd; font-weight:600;}
+  .info .step{color:#7ee787; font-weight:700;}
+  .info .new{color:#d4a0ff;}
+  .info .ai{color:#7ee787; font-weight:700;}
+  .btn-toggle-rules{
+    display:block; width:100%; margin:0 0 10px 0;
+    padding:7px 10px;
+    font-family:inherit; font-size:11px; font-weight:600;
+    letter-spacing:.1em; text-transform:uppercase;
+    background:rgba(120,180,255,.08);
+    border:1px solid rgba(120,180,255,.3);
+    color:#a0c8ff; border-radius:8px;
+    cursor:pointer; transition:.18s;
+  }
+  .btn-toggle-rules:hover{
+    background:rgba(120,180,255,.18);
+    border-color:rgba(120,180,255,.55);
+  }
+  .info.collapsed .info-content{display:none;}
+  .legend{margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:10.5px; line-height:1.7;}
+  .legend .lk{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .board-wrap{display:flex; align-items:center; justify-content:center; flex:1 1 auto; min-width:0;}
+  canvas{border-radius:10px; box-shadow:0 24px 70px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.06); cursor:pointer; touch-action:manipulation; display:block;}
+  .edit-panel{
+    margin-top:12px; padding:10px; border-radius:10px;
+    background:rgba(63,136,224,.08); border:1px solid rgba(63,136,224,.3);
+  }
+  .palette{display:flex; gap:6px;}
+  .palette .tool{
+    flex:1; padding:8px 2px; font-size:20px; line-height:1; min-height:38px;
+    display:flex; align-items:center; justify-content:center; border-radius:8px;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    cursor:pointer; transition:.15s;
+  }
+  .palette .tool:hover{background:#2a3442; border-color:#4c5a6a;}
+  .palette .tool.active{
+    background:linear-gradient(180deg,#6aa6e0,#3f78b0);
+    border-color:#2c5580; color:#fff;
+    box-shadow:0 0 12px rgba(63,136,224,.5);
+  }
+  .palette .tool[data-tool="empty"]{font-size:16px; color:var(--muted);}
+  .palette .tool[data-tool="gP"], .palette .tool[data-tool="gK"]{color:#a8e090;}
+  .btn-clear-board{
+    width:100%; margin-top:8px; padding:8px; font-size:12px;
+    background:rgba(224,82,82,.15); border-color:rgba(224,82,82,.4); color:#ffb0b0;
+  }
+  .btn-clear-board:hover{background:rgba(224,82,82,.25);}
+
+  @media (max-width:820px){
+    body{align-items:flex-start; padding:10px;}
+    .app{flex-direction:column-reverse; align-items:center; gap:14px;}
+    .panel{width:100%; max-width:520px; padding:15px;}
+    h1{font-size:15px;}
+    .controls{flex-direction:row;}
+
+    .bottom-stack{ right:8px; bottom:8px; gap:6px; }
+    .counters-card{
+      padding:6px 9px; font-size:10px; max-width:72vw;
+    }
+    .counters-card .cname{ font-size:9.5px; }
+    .counters-card .cstat b{ font-size:10.5px; }
+    .credit{ padding:7px 10px; font-size:9px; max-width:72vw; }
+    .credit .t1{font-size:10px;}
+    .credit .t3{font-size:8px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <h1>Duelo de Reyes</h1>
+    <div class="subtitle" id="subtitle">8×8 · 64 casillas · 16 vs 16 (50.0 %)</div>
+    <div class="status" id="status">
+      <span class="dot white" id="statusDot"></span>
+      <span id="statusText">Turno de las blancas</span>
+    </div>
+
+    <div class="controls">
+      <button class="primary" id="btnNew">Nueva partida</button>
+      <button id="btnEdit">Editar tablero</button>
+      <button id="btnStopAI" disabled>Detener IA</button>
+    </div>
+    <div class="field">
+      <label for="selSize">Tablero</label>
+      <select id="selSize">
+        <option value="8" selected>8×8</option>
+        <option value="10">10×10</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="selDensity">Densidad</label>
+      <select id="selDensity">
+        <option value="abierta" selected>Abierta (recomendada)</option>
+        <option value="densa">Densa (caótica)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="selMode">Modo</label>
+      <select id="selMode">
+        <option value="ai" selected>Contra la IA</option>
+        <option value="pvp">Dos jugadores</option>
+        <option value="aiai">IA contra IA (automático)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="selDiff">Dificultad IA</label>
+      <select id="selDiff">
+        <option value="1">Fácil</option>
+        <option value="2">Medio</option>
+        <option value="3" selected>Difícil</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="selTheme">Color de fichas</label>
+      <select id="selTheme">
+        <option value="clasico" selected>Clásico (blancas / verdes)</option>
+        <option value="madera">Madera (clara / oscura)</option>
+        <option value="azulrojo">Azul / Rojo</option>
+        <option value="marmol">Mármol (claro / oscuro)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="selKingBlock">Rey Bloqueado</label>
+      <select id="selKingBlock">
+        <option value="1" selected>1 o más capturas</option>
+        <option value="2">2 o más capturas</option>
+      </select>
+    </div>
+    <div class="edit-panel" id="editPanel" style="display:none;">
+      <div class="field" style="margin-bottom:8px;"><label>Pieza a colocar</label></div>
+      <div class="palette" id="palette">
+        <button class="tool" data-tool="empty" title="Vaciar casilla">✕</button>
+        <button class="tool active" data-tool="wP" title="Peón blanco">♙</button>
+        <button class="tool" data-tool="wK" title="Rey blanco">♔</button>
+        <button class="tool" data-tool="gP" title="Peón verde">♟</button>
+        <button class="tool" data-tool="gK" title="Rey verde">♚</button>
+      </div>
+      <button class="btn-clear-board" id="btnClearBoard">Vaciar tablero</button>
+    </div>
+
+    <div class="info" id="rulesInfo">
+      <button class="btn-toggle-rules" id="btnToggleRules" type="button">Ocultar reglas</button>
+      <div class="info-content">
+        <b><span class="step">v56</span> — Reglas de Duelo de Reyes</b><br><br>
+
+        <b style="color:#ffb070">⚔️ Obligación de capturar</b><br>
+        • Si en tu turno existe <b>al menos una captura disponible</b>, estás obligado a capturar (no puedes hacer movimientos normales).<br>
+        • Si tras capturar la <b>misma pieza</b> puede seguir capturando, la cadena es <b>obligatoria</b> hasta agotar todas las capturas.<br><br>
+
+        <b style="color:#7ee787">♙ Peones — movimientos</b><br>
+        • <b>Paso diagonal</b>: avanzan 1 casilla en diagonal hacia delante (nunca en línea recta).<br>
+        • <b>Paso vertical simple</b>: avanzan 1 casilla en línea recta hacia delante si la casilla está vacía. No captura; puede coronar (con la misma restricción que el paso diagonal).<br>
+        • <b>Salto sobre rival</b>: si hay una pieza rival justo delante en vertical y la casilla 2 pasos más allá está vacía, saltan sobre ella y aterrizan detrás (la pieza saltada <b>no</b> se captura). No pueden saltar sobre reyes.<br>
+        • <b>Salto sobre propio</b>: si hay un peón propio justo delante en vertical, pueden saltarlo y aterrizar 2 pasos más allá; el peón saltado <b>retrocede en diagonal</b> a una casilla libre (a elegir si hay dos). No pueden saltar sobre reyes.<br><br>
+
+        <b style="color:#7ee787">♙ Peones — capturas</b><br>
+        • <b>Captura diagonal</b>: saltan sobre una pieza rival adyacente en diagonal y aterrizan 2 pasos en diagonal, en casilla vacía. Las 4 diagonales están permitidas (incluidas hacia atrás).<br>
+        • Pueden capturar <b>peones y reyes</b>. A un <b>rey solo si está flanqueado</b>: debe tener al menos 2 peones del mismo jugador en sus 8 casillas adyacentes (incluyendo el que captura).<br>
+        • <b>No pueden capturar reyes bloqueados</b> (🔒) de ninguna forma.<br>
+        • <b>Salto ortogonal sobre rey flanqueado (v55)</b>: si un rey enemigo está <b>flanqueado</b> (≥2 peones del jugador en sus 8 casillas adyacentes), un peón <b>ortogonalmente adyacente</b> puede saltarlo en línea recta y aterrizar 2 casillas más allá, en casilla vacía. Captura al rey. <b>No encadena</b> (termina el turno). <b>No aplica a reyes bloqueados</b> (🔒).<br>
+        • <b>Ortogonales de peón</b>: tras una <b>captura diagonal hacia atrás</b> en la cadena, el peón puede además capturar en las 4 direcciones <b>ortogonales</b> durante el resto de la cadena.<br><br>
+
+        <b style="color:#7ee787">♙ Peones — coronación</b><br>
+        • <b>Coronación normal</b>: al llegar a la última fila (fila 0 para blancas, SIZE-1 para verdes) mediante <b>captura</b>, el peón se convierte en <b>rey normal</b> (siempre, aunque aterrice entre dos peones rivales). Mediante <b>paso diagonal o paso vertical simple</b>, corona solo si no queda "entre dos peones rivales".<br>
+        • <b>Rey bloqueado (🔒)</b>: si un peón captura y aterriza en un <b>borde lateral</b> (no esquina) con al menos 1 o 2 capturas en la cadena (según ajuste), corona un <b>rey bloqueado</b>: no puede moverse, ni capturar, ni ser capturado.<br>
+        • <b>Retorno victorioso</b>: si un peón (sin coronar) encadena <b>≥2 capturas</b> y aterriza en <b>tu primera fila</b>, ganas al instante.<br><br>
+
+        <b style="color:#a0c8ff">♔ Reyes — movimientos</b><br>
+        • Se mueven <b>1 casilla en las 8 direcciones</b> a casilla vacía.<br>
+        • <b>No pueden bloquear</b> a ningún peón rival: si un movimiento de rey (sin capturar) dejaría a un peón rival sin movimientos legales, ese movimiento es <b>ilegal</b>.<br><br>
+
+        <b style="color:#a0c8ff">♔ Reyes — capturas</b><br>
+        • Capturan en las <b>8 direcciones</b>: saltan sobre una pieza rival adyacente y aterrizan 2 casillas más allá, en casilla vacía.<br>
+        • No pueden capturar <b>reyes bloqueados</b> (🔒).<br>
+        • Si tras capturar siguen teniendo capturas, la <b>cadena es obligatoria</b>.<br><br>
+
+        <b style="color:#a0c8ff">♔ Reyes — restricciones</b><br>
+        • <b>Límite de 2 turnos consecutivos de rey</b>: si un jugador mueve un rey sin capturar 2 turnos seguidos, en el tercero <b>no podrá mover reyes</b> (debe jugar un peón).<br>
+        • <b>Exención</b>: si no tienes peones y el rival sí, tus reyes quedan <b>libres</b> del límite.<br>
+        • Los <b>reyes bloqueados</b> (🔒) no se mueven, ni capturan, ni pueden ser capturados de ninguna forma.<br><br>
+
+        <b style="color:#f0d9a8">🏆 Formas de victoria</b><br>
+        • <b>Retorno victorioso</b>: peón con ≥2 capturas en cadena que aterriza en tu primera fila.<br>
+        • <b>Dominación</b>: 3 o más reyes de ventaja en cualquier momento.<br>
+        • <b>Rival sin movimientos</b>: si al rival le toca y no tiene jugadas legales, pierde.<br>
+        • <b>Sin peones</b>: gana quien tenga más reyes; si empatan, quien haya coronado primero un rey normal.<br>
+        • <b>Tablas</b>: sin peones, reyes iguales y sin coronación previa registrada.
+      </div>
+    </div>
+
+    <div class="info" id="extraInfo">
+      <button class="btn-toggle-rules" id="btnToggleExtra" type="button">Ocultar detalles</button>
+      <div class="info-content">
+        <b style="color:#cfc9bd">⚙️ Otros</b><br>
+        • <b>Tableros</b>: 8×8 (recomendado para ver el retorno) y 10×10.<br>
+        • <b>Densidad</b>: Abierta / Intermedia / Densa cambia las filas iniciales por bando.<br>
+        • <b>Color de fichas</b>: 4 temas visuales, no afecta a la jugabilidad.<br>
+        • <b>Umbral de rey bloqueado</b>: 1+ o 2+ capturas (configurable).<br>
+        • <b>Modos</b>: Contra la IA, Dos jugadores, IA contra IA (automático).<br>
+        • <b>Editar tablero</b>: coloca/quita piezas y reanuda la partida.<br>
+
+        <div class="legend">
+          <span class="lk" style="background:rgba(60,180,120,.9)"></span>Diagonal / paso vertical / paso rey<br>
+          <span class="lk" style="background:rgba(150,100,255,.9)"></span>Salto sobre rival<br>
+          <span class="lk" style="background:rgba(255,160,50,.9)"></span>Salto sobre propio<br>
+          <span class="lk" style="background:rgba(224,82,82,.9)"></span>Captura diagonal<br>
+          <span class="lk" style="background:rgba(255,80,200,.95)"></span>Salto ortogonal sobre rey flanqueado<br>
+          <span class="lk" style="background:rgba(255,120,40,.95)"></span>Captura ortogonal (rey)<br>
+          <span class="lk" style="background:#b088ff"></span>Rey bloqueado (borde) — invulnerable<br>
+          <span class="lk" style="background:rgba(255,140,40,.9)"></span>Rey sin movimientos (límite 2)<br>
+          <span class="lk" style="background:rgba(212,168,67,.9)"></span>Última jugada
+        </div>
+      </div>
+    </div>
+  </aside>
+  <main class="board-wrap">
+    <canvas id="board"></canvas>
+  </main>
+</div>
+
+<div class="bottom-stack" aria-hidden="true">
+  <div class="counters-card" id="countersCard">
+    <div class="crow">
+      <span class="cname">Blancas</span>
+      <span class="cstat">♙ <b id="countWhite">16</b></span>
+      <span class="cstat kings">♔ <b id="kingsWhite">0</b></span>
+      <span class="cstat locked">🔒 <b id="lockedWhite">0</b></span>
+      <span class="cstat streak" id="streakWhite" style="display:none;">⏸ <b id="streakValWhite">0</b></span>
+    </div>
+    <div class="crow">
+      <span class="cname">Verdes</span>
+      <span class="cstat">♟ <b id="countGreen">16</b></span>
+      <span class="cstat kings">♚ <b id="kingsGreen">0</b></span>
+      <span class="cstat locked">🔒 <b id="lockedGreen">0</b></span>
+      <span class="cstat streak" id="streakGreen" style="display:none;">⏸ <b id="streakValGreen">0</b></span>
+    </div>
+  </div>
+  <div class="credit">
+    <span class="t1">Duelo de Reyes</span>
+    <span class="t2">Creado por: <b>Ernesto Sánchez Fernández</b></span>
+    <span class="t3">Código HTML creado por <em>IA</em></span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DUELO DE REYES — v56.4
+//  · botón "Detener IA" siempre visible (se deshabilita si no piensa)
+//  · contadores + firma en bloque fijo abajo-derecha
+//  · parches D4/L6 aplicados
+//  · IA en Web Worker
+//  · reglas y "Otros/leyenda" en dos plegables independientes
+// ============================================================
+let SIZE = 8;
+const P1 = 1, P2 = 2;
+
+let board = [];
+let turn = P1;
+let selected = null;
+let legalMoves = [];
+let pendingOwnJump = null;
+let chainActive = false;
+let chainFirstWasForward = null;
+let chainHasBackwardDiag = false;
+let chainOrthoDone = false;
+let chainCaptureCount = 0;
+
+let gameOver = false;
+let winner = null;
+let winReason = null;
+
+let kingMoveStreak = { [P1]: 0, [P2]: 0 };
+let firstNormalCoronationPlayer = null;
+
+let turnWasKingMove = false;
+let turnWasCapture = false;
+
+let editMode = false;
+let editTool = 'wP';
+
+let mode = 'ai';
+let aiPlayer = P2;
+let difficulty = 3;
+let density = 'abierta';
+let aiThinking = false;
+
+let kingBlockMinCaptures = 1;
+let pieceTheme = 'clasico';
+
+let aiWorker = null;
+let aiWorkerBroken = false;
+let aiStopRequested = false;
+let aiTurnId = 0;
+let activeTurnId = 0;
+let currentAIPlayer = null;
+
+const PIECE_THEMES = {
+  clasico: {
+    P1: { g0:'#ffffff', g1:'#f4ecdc', g2:'#c0b098', stroke:'#8a7a5a', inner:'rgba(138,122,90,.55)', shine:'rgba(255,255,255,.70)' },
+    P2: { g0:'#7ea86b', g1:'#5a8a4a', g2:'#2d4a24', stroke:'#1a2a14', inner:'rgba(30,60,20,.55)',   shine:'rgba(200,255,180,.35)' }
+  },
+  madera: {
+    P1: { g0:'#f0d8b0', g1:'#d4a97a', g2:'#8b5e34', stroke:'#4a2e14', inner:'rgba(74,46,20,.55)',   shine:'rgba(255,240,200,.70)' },
+    P2: { g0:'#8b5e34', g1:'#5c3a1e', g2:'#2e1a0a', stroke:'#1a0e04', inner:'rgba(26,14,4,.55)',   shine:'rgba(220,170,110,.40)' }
+  },
+  azulrojo: {
+    P1: { g0:'#cce0ff', g1:'#5a8ad0', g2:'#1a3a70', stroke:'#0a1a40', inner:'rgba(10,26,64,.55)',   shine:'rgba(220,240,255,.70)' },
+    P2: { g0:'#ff9a9a', g1:'#d03030', g2:'#701010', stroke:'#3a0808', inner:'rgba(58,8,8,.55)',    shine:'rgba(255,200,200,.40)' }
+  },
+  marmol: {
+    P1: { g0:'#ffffff', g1:'#e0e0e0', g2:'#909090', stroke:'#404040', inner:'rgba(64,64,64,.55)',   shine:'rgba(255,255,255,.80)' },
+    P2: { g0:'#808080', g1:'#404040', g2:'#0a0a0a', stroke:'#000000', inner:'rgba(20,20,20,.55)',   shine:'rgba(200,200,200,.40)' }
+  }
+};
+
+let lastMoveStart = null;
+let lastMoveEnd = null;
+
+function rowsPerSideFor(size, dens) {
+  if (dens === 'densa') return Math.max(1, Math.floor(size / 2) - 1);
+  if (dens === 'intermedia' && size >= 12) return 4;
+  return size <= 8 ? 2 : 3;
+}
+
+function isChainOrthoEnabled() {
+  return chainHasBackwardDiag === true;
+}
+
+function inBounds(r, c) { return r >= 0 && r < SIZE && c >= 0 && c < SIZE; }
+
+function isAIPlayer(player) {
+  if (mode === 'ai') return player === aiPlayer;
+  if (mode === 'aiai') return true;
+  return false;
+}
+function playerLabel(player) {
+  if (mode === 'aiai') return player === P1 ? 'blancas (IA)' : 'verdes (IA)';
+  if (mode === 'ai') return player === P1 ? 'blancas' : 'IA verdes';
+  return player === P1 ? 'blancas' : 'verdes';
+}
+
+function hasAnyPawnsOnBoard() {
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (p && !p.k) return true;
+  }
+  return false;
+}
+
+function playerHasPawns(player) {
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && !p.k) return true;
+  }
+  return false;
+}
+
+function isKingLimitExempt(player) {
+  const opponent = player === P1 ? P2 : P1;
+  return !playerHasPawns(player) && playerHasPawns(opponent);
+}
+
+function isCorner(r, c) {
+  return (r === 0 || r === SIZE - 1) && (c === 0 || c === SIZE - 1);
+}
+
+function initBoard() {
+  const rowsPerSide = rowsPerSideFor(SIZE, density);
+  board = [];
+  for (let r = 0; r < SIZE; r++) {
+    const row = [];
+    for (let c = 0; c < SIZE; c++) {
+      let piece = null;
+      if (r < rowsPerSide) piece = { p: P2, k: false };
+      else if (r >= SIZE - rowsPerSide) piece = { p: P1, k: false };
+      row.push(piece);
+    }
+    board.push(row);
+  }
+  resetGameState();
+}
+
+function resetGameState() {
+  turn = P1;
+  selected = null; legalMoves = []; pendingOwnJump = null;
+  chainActive = false;
+  chainFirstWasForward = null;
+  chainHasBackwardDiag = false;
+  chainOrthoDone = false;
+  chainCaptureCount = 0;
+  gameOver = false; winner = null; winReason = null;
+  kingMoveStreak = { [P1]: 0, [P2]: 0 };
+  firstNormalCoronationPlayer = null;
+  turnWasKingMove = false;
+  turnWasCapture = false;
+  aiThinking = false;
+  aiStopRequested = false;
+  activeTurnId = 0;
+  if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+  lastMoveStart = null;
+  lastMoveEnd = null;
+}
+
+function countPieces() {
+  let w = 0, g = 0, kw = 0, kg = 0, lw = 0, lg = 0, pawns = 0;
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (!p) continue;
+    if (p.p === P1) { w++; if (p.k) { kw++; if (p.locked) lw++; } }
+    else { g++; if (p.k) { kg++; if (p.locked) lg++; } }
+    if (!p.k) pawns++;
+  }
+  return { w, g, kw, kg, lw, lg, pawns };
+}
+
+function countKings(player) {
+  let n = 0;
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && p.k) n++;
+  }
+  return n;
+}
+
+function checkKingDomination() {
+  if (gameOver) return false;
+  const k1 = countKings(P1), k2 = countKings(P2);
+  if (k1 - k2 >= 3) {
+    gameOver = true; winner = P1; winReason = 'domination';
+    chainActive = false; selected = null; legalMoves = []; pendingOwnJump = null;
+    return true;
+  }
+  if (k2 - k1 >= 3) {
+    gameOver = true; winner = P2; winReason = 'domination';
+    chainActive = false; selected = null; legalMoves = []; pendingOwnJump = null;
+    return true;
+  }
+  return false;
+}
+
+function checkNoPawns() {
+  if (gameOver) return false;
+  const { pawns } = countPieces();
+  if (pawns > 0) return false;
+  const k1 = countKings(P1), k2 = countKings(P2);
+  if (k1 > k2) { gameOver = true; winner = P1; winReason = 'noPawns'; return true; }
+  if (k2 > k1) { gameOver = true; winner = P2; winReason = 'noPawns'; return true; }
+  if (firstNormalCoronationPlayer !== null) {
+    gameOver = true; winner = firstNormalCoronationPlayer; winReason = 'noPawnsFirstCoronation';
+    return true;
+  }
+  gameOver = true; winner = null; winReason = 'noPawnsDraw';
+  return true;
+}
+
+function isBetweenTwoEnemyPawns(r, c, player) {
+  const enemy = player === P1 ? P2 : P1;
+  if (c - 1 < 0 || c + 1 >= SIZE) return false;
+  const left = board[r][c - 1], right = board[r][c + 1];
+  const isEnemyPawn = (x) => x && x.p === enemy && !x.k;
+  return isEnemyPawn(left) && isEnemyPawn(right);
+}
+
+function hasEnemyPawnOrthogonalAdjacent(r, c, player) {
+  const enemy = player === P1 ? P2 : P1;
+  for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+    const nr = r + dr, nc = c + dc;
+    if (!inBounds(nr, nc)) continue;
+    const p = board[nr][nc];
+    if (p && p.p === enemy && !p.k) return true;
+  }
+  return false;
+}
+
+function isForwardDiagCapture(move, player) {
+  if (!move.captured) return false;
+  const dr = move.to.r - move.from.r;
+  const dc = move.to.c - move.from.c;
+  if (Math.abs(dr) !== 2 || Math.abs(dc) !== 2) return false;
+  const forward = player === P1 ? -1 : 1;
+  return dr === forward * 2;
+}
+
+function crownAt(piece, r, c) {
+  piece.k = true;
+  if (!isCorner(r, c) && (c === 0 || c === SIZE - 1)) piece.locked = true;
+  if (firstNormalCoronationPlayer === null) {
+    if (piece.p === P1 && r === 0) firstNormalCoronationPlayer = P1;
+    else if (piece.p === P2 && r === SIZE - 1) firstNormalCoronationPlayer = P2;
+  }
+}
+
+function canPawnCaptureKing(pawnPlayer, kingR, kingC) {
+  let count = 0;
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    if (dr === 0 && dc === 0) continue;
+    const nr = kingR + dr, nc = kingC + dc;
+    if (!inBounds(nr, nc)) continue;
+    const p = board[nr][nc];
+    if (p && p.p === pawnPlayer && !p.k) count++;
+  }
+  return count >= 2;
+}
+
+function getPawnMovesForBlocking(r, c, piece) {
+  if (!piece || piece.k) return [];
+  const moves = [];
+  const forward = piece.p === P1 ? -1 : 1;
+  const promoRow = piece.p === P1 ? 0 : SIZE - 1;
+
+  {
+    const nr = r + forward, nc = c;
+    if (inBounds(nr, nc) && !board[nr][nc]) {
+      if (!(nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, piece.p))) {
+        moves.push({ r: nr, c: nc });
+      }
+    }
+  }
+
+  for (const dc of [-1, 1]) {
+    const nr = r + forward, nc = c + dc;
+    if (inBounds(nr, nc) && !board[nr][nc]) {
+      if (nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, piece.p)) continue;
+      moves.push({ r: nr, c: nc });
+    }
+  }
+
+  const midR = r + forward, midC = c;
+  const landR = r + forward * 2, landC = c;
+  if (inBounds(midR, midC) && board[midR][midC] &&
+      inBounds(landR, landC) && !board[landR][landC]) {
+    const jumped = board[midR][midC];
+    if (!jumped.k && jumped.p !== piece.p) {
+      if (landR !== promoRow) moves.push({ r: landR, c: landC });
+    } else if (!jumped.k && jumped.p === piece.p) {
+      if (landR !== promoRow) {
+        const backRow = midR - forward;
+        const retreatOptions = [
+          { r: backRow, c: midC - 1 },
+          { r: backRow, c: midC + 1 }
+        ].filter(o => inBounds(o.r, o.c) && !board[o.r][o.c]);
+        if (retreatOptions.length > 0) moves.push({ r: landR, c: landC });
+      }
+    }
+  }
+
+  const caps = getCapturesFrom(r, c, false);
+  for (const cap of caps) moves.push({ r: cap.to.r, c: cap.to.c });
+  return moves;
+}
+
+function kingMoveWouldBlockAnyPawn(player, fromR, fromC, toR, toC, capR, capC) {
+  const opponent = player === P1 ? P2 : P1;
+  const capturingPawn = (capR !== undefined && capR !== null);
+
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const pawn = board[r][c];
+    if (!pawn || pawn.p !== opponent || pawn.k) continue;
+    if (Math.abs(toR - r) > 3 || Math.abs(toC - c) > 3) continue;
+    if (capturingPawn && capR === r && capC === c) continue;
+
+    const before = getPawnMovesForBlocking(r, c, pawn).length;
+    if (before === 0) continue;
+
+    const moving = board[fromR][fromC];
+    const target = board[toR][toC];
+    let captured = null;
+    if (capturingPawn) {
+      captured = board[capR][capC];
+      board[capR][capC] = null;
+    }
+    board[fromR][fromC] = null;
+    board[toR][toC] = moving;
+
+    const afterPawn = board[r][c];
+    const after = afterPawn ? getPawnMovesForBlocking(r, c, afterPawn).length : 0;
+
+    board[fromR][fromC] = moving;
+    board[toR][toC] = target;
+    if (capturingPawn) board[capR][capC] = captured;
+
+    if (after === 0) return true;
+  }
+  return false;
+}
+
+function getCapturesFrom(r, c, includeOrtho = false, isChainContinuation = false) {
+  const piece = board[r][c];
+  if (!piece) return [];
+  if (piece.locked) return [];
+  const captures = [];
+
+  if (piece.k) {
+    for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+      const midR = r + dr, midC = c + dc;
+      const landR = r + 2*dr, landC = c + 2*dc;
+      if (!inBounds(landR, landC)) continue;
+      const mid = board[midR][midC];
+      if (!mid || mid.p === piece.p) continue;
+      if (mid.locked) continue;
+      if (board[landR][landC]) continue;
+      if (kingMoveWouldBlockAnyPawn(piece.p, r, c, landR, landC, midR, midC)) continue;
+      captures.push({ from: {r, c}, to: {r: landR, c: landC},
+                      captured: {r: midR, c: midC}, type: 'capture',
+                      ortho: (dr === 0 || dc === 0) });
+    }
+    return captures;
+  }
+
+  for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+    const midR = r + dr, midC = c + dc;
+    const landR = r + 2*dr, landC = c + 2*dc;
+    if (!inBounds(landR, landC)) continue;
+    const mid = board[midR][midC];
+    if (!mid || mid.p === piece.p) continue;
+    if (mid.locked) continue;
+    if (board[landR][landC]) continue;
+    if (mid.k && !canPawnCaptureKing(piece.p, midR, midC)) continue;
+    captures.push({ from: {r, c}, to: {r: landR, c: landC},
+                    captured: {r: midR, c: midC}, type: 'capture' });
+  }
+
+  if (includeOrtho) {
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const midR = r + dr, midC = c + dc;
+      const landR = r + 2*dr, landC = c + 2*dc;
+      if (!inBounds(landR, landC)) continue;
+      const mid = board[midR][midC];
+      if (!mid || mid.p === piece.p) continue;
+      if (mid.locked) continue;
+      if (board[landR][landC]) continue;
+      if (mid.k && !canPawnCaptureKing(piece.p, midR, midC)) continue;
+      captures.push({ from: {r, c}, to: {r: landR, c: landC},
+                      captured: {r: midR, c: midC}, type: 'capture', ortho: true });
+    }
+  }
+
+  if (!isChainContinuation) {
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const midR = r + dr, midC = c + dc;
+      const landR = r + 2*dr, landC = c + 2*dc;
+      if (!inBounds(landR, landC)) continue;
+      const mid = board[midR][midC];
+      if (!mid || mid.p === piece.p) continue;
+      if (!mid.k) continue;
+      if (mid.locked) continue;
+      if (board[landR][landC]) continue;
+      if (!canPawnCaptureKing(piece.p, midR, midC)) continue;
+      captures.push({ from: {r, c}, to: {r: landR, c: landC},
+                      captured: {r: midR, c: midC}, type: 'capture', kingOrtho: true });
+    }
+  }
+
+  return captures;
+}
+
+function playerHasCaptures(player) {
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && !p.locked && getCapturesFrom(r, c, false).length > 0) return true;
+  }
+  return false;
+}
+
+function getPieceMoves(r, c) {
+  const piece = board[r][c];
+  if (!piece) return [];
+  if (piece.locked) return [];
+
+  if (playerHasCaptures(piece.p)) return getCapturesFrom(r, c, false);
+
+  if (piece.k) {
+    if (kingMoveStreak[piece.p] >= 2 && !isKingLimitExempt(piece.p)) return [];
+    const moves = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr, nc = c + dc;
+      if (inBounds(nr, nc) && !board[nr][nc]) {
+        if (kingMoveWouldBlockAnyPawn(piece.p, r, c, nr, nc)) continue;
+        moves.push({ from: {r, c}, to: {r: nr, c: nc}, type: 'king-step' });
+      }
+    }
+    return moves;
+  }
+
+  const forward = piece.p === P1 ? -1 : 1;
+  const promoRow = piece.p === P1 ? 0 : SIZE - 1;
+  const moves = [];
+
+  {
+    const nr = r + forward, nc = c;
+    if (inBounds(nr, nc) && !board[nr][nc]) {
+      if (!(nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, piece.p))) {
+        moves.push({ from: {r, c}, to: {r: nr, c: nc}, type: 'step' });
+      }
+    }
+  }
+
+  for (const dc of [-1, 1]) {
+    const nr = r + forward, nc = c + dc;
+    if (inBounds(nr, nc) && !board[nr][nc]) {
+      if (nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, piece.p)) continue;
+      moves.push({ from: {r, c}, to: {r: nr, c: nc}, type: 'diag' });
+    }
+  }
+
+  const midR = r + forward, midC = c;
+  const landR = r + forward * 2, landC = c;
+  if (inBounds(midR, midC) && board[midR][midC] &&
+      inBounds(landR, landC) && !board[landR][landC]) {
+    const jumped = board[midR][midC];
+    if (!jumped.k && jumped.p !== piece.p) {
+      if (landR !== promoRow) {
+        moves.push({ from: {r, c}, to: {r: landR, c: landC},
+                     jumpOver: {r: midR, c: midC}, type: 'jumpOpponent' });
+      }
+    } else if (!jumped.k && jumped.p === piece.p) {
+      if (landR !== promoRow) {
+        const backRow = midR - forward;
+        const opt1 = { r: backRow, c: midC - 1 };
+        const opt2 = { r: backRow, c: midC + 1 };
+        const retreatOptions = [opt1, opt2].filter(o =>
+          inBounds(o.r, o.c) && !board[o.r][o.c]
+        );
+        if (retreatOptions.length > 0) {
+          moves.push({ from: {r, c}, to: {r: landR, c: landC},
+                       jumpOver: {r: midR, c: midC}, type: 'jumpOwn',
+                       retreatOptions });
+        }
+      }
+    }
+  }
+
+  return moves;
+}
+
+function hasAnyMoves(player) {
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && getPieceMoves(r, c).length > 0) return true;
+  }
+  return false;
+}
+
+function updateChainFlags(move, piece) {
+  if (piece.k) return;
+  const dr = move.to.r - move.from.r;
+  const dc = move.to.c - move.from.c;
+  const isDiag = Math.abs(dr) === 2 && Math.abs(dc) === 2;
+  if (!isDiag) return;
+  const forward = piece.p === P1 ? -1 : 1;
+  const isFwd = dr === forward * 2;
+  const isBwd = dr === -forward * 2;
+  if (!chainActive) {
+    if (isFwd) chainFirstWasForward = true;
+    else if (isBwd) chainFirstWasForward = false;
+  }
+  if (isBwd) chainHasBackwardDiag = true;
+}
+
+function executeMove(move) {
+  const piece = board[move.from.r][move.from.c];
+  const wasKing = piece.k;
+
+  if (!chainActive) {
+    turnWasKingMove = wasKing;
+    turnWasCapture = false;
+    chainCaptureCount = 0;
+    lastMoveStart = { r: move.from.r, c: move.from.c };
+  }
+  lastMoveEnd = { r: move.to.r, c: move.to.c };
+
+  board[move.from.r][move.from.c] = null;
+  board[move.to.r][move.to.c] = piece;
+  if (move.captured) board[move.captured.r][move.captured.c] = null;
+
+  pendingOwnJump = null;
+
+  if (move.type === 'capture') {
+    turnWasCapture = true;
+    chainCaptureCount++;
+    updateChainFlags(move, piece);
+    if (move.ortho && !piece.k) chainOrthoDone = true;
+  }
+
+  if (!piece.k && chainCaptureCount >= 2) {
+    const ownFirstRow = piece.p === P1 ? SIZE - 1 : 0;
+    if (move.to.r === ownFirstRow) {
+      crownAt(piece, move.to.r, move.to.c);
+      gameOver = true; winner = piece.p; winReason = 'return';
+      chainActive = false; selected = null; legalMoves = [];
+      endTurn(); return;
+    }
+  }
+
+  let crowned = false;
+  if (!wasKing && !piece.k) {
+    const promoRow = piece.p === P1 ? 0 : SIZE - 1;
+    const isPromo = move.to.r === promoRow;
+    const isEdge = move.to.c === 0 || move.to.c === SIZE - 1;
+    const atCorner = isCorner(move.to.r, move.to.c);
+
+    if (!atCorner && isEdge && chainCaptureCount >= kingBlockMinCaptures) {
+      crownAt(piece, move.to.r, move.to.c);
+      crowned = true;
+    }
+
+    if (!crowned && isPromo) {
+      if (move.type === 'capture') {
+        crownAt(piece, move.to.r, move.to.c);
+        crowned = true;
+      } else if (move.type === 'diag' || move.type === 'step') {
+        if (!isBetweenTwoEnemyPawns(move.to.r, move.to.c, piece.p)) {
+          crownAt(piece, move.to.r, move.to.c);
+          crowned = true;
+        }
+      }
+    }
+  }
+
+  if (checkKingDomination()) { endTurn(); return; }
+
+  if (crowned) {
+    chainActive = false; selected = null; legalMoves = [];
+    endTurn(); return;
+  }
+
+  if (move.type === 'capture' && !move.kingOrtho) {
+    const includeOrtho = isChainOrthoEnabled();
+    const more = getCapturesFrom(move.to.r, move.to.c, includeOrtho, true);
+    if (more.length > 0) {
+      chainActive = true;
+      selected = { r: move.to.r, c: move.to.c };
+      legalMoves = more;
+      draw(); updateStatus();
+      return;
+    }
+  }
+
+  chainActive = false;
+  selected = null;
+  legalMoves = [];
+  endTurn();
+}
+
+function executeOwnJumpWithRetreat(move, retreat) {
+  const piece = board[move.from.r][move.from.c];
+  const jumped = board[move.jumpOver.r][move.jumpOver.c];
+  lastMoveStart = { r: move.from.r, c: move.from.c };
+  lastMoveEnd = { r: move.to.r, c: move.to.c };
+  board[move.from.r][move.from.c] = null;
+  board[move.to.r][move.to.c] = piece;
+  board[move.jumpOver.r][move.jumpOver.c] = null;
+  board[retreat.r][retreat.c] = jumped;
+  selected = null; legalMoves = []; pendingOwnJump = null; chainActive = false;
+  turnWasKingMove = false;
+  turnWasCapture = false;
+  endTurn();
+}
+
+function endTurn() {
+  if (turnWasKingMove) {
+    if (!turnWasCapture) kingMoveStreak[turn]++;
+  } else {
+    kingMoveStreak[turn] = 0;
+  }
+
+  chainActive = false;
+  chainFirstWasForward = null;
+  chainHasBackwardDiag = false;
+  chainOrthoDone = false;
+  chainCaptureCount = 0;
+
+  if (gameOver) { draw(); updateStatus(); return; }
+  if (checkNoPawns()) { draw(); updateStatus(); return; }
+
+  turn = turn === P1 ? P2 : P1;
+
+  if (!hasAnyMoves(turn)) {
+    gameOver = true;
+    winner = turn === P1 ? P2 : P1;
+    winReason = 'noMoves';
+    chainActive = false; selected = null; legalMoves = []; pendingOwnJump = null;
+    draw(); updateStatus();
+    return;
+  }
+
+  draw(); updateStatus();
+  maybeStartAITurn();
+}
+
+function maybeStartAITurn() {
+  if (gameOver || aiThinking) return;
+  if (!isAIPlayer(turn)) return;
+  setTimeout(aiTurn, mode === 'aiai' ? 400 : 300);
+}
+
+const WIN_SCORE = 10000000;
+const LOSS_SCORE = -10000000;
+
+let historyHeuristic = {};
+
+function moveKey(step) {
+  return step.from.r + ',' + step.from.c + '>' + step.to.r + ',' + step.to.c;
+}
+
+function evaluateBoard(perspective) {
+  let score = 0;
+  const half = (SIZE - 1) / 2;
+
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (!p) continue;
+    const sign = p.p === perspective ? 1 : -1;
+
+    if (p.k) {
+      if (p.locked) {
+        score += sign * 55;
+      } else {
+        score += sign * 105;
+        let mob = 0, threats = 0;
+        for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+          const nr = r + dr, nc = c + dc;
+          if (!inBounds(nr, nc)) continue;
+          if (!board[nr][nc]) { mob++; continue; }
+          const mid = board[nr][nc];
+          if (mid.p !== p.p && !mid.locked) {
+            const landR = r + 2*dr, landC = c + 2*dc;
+            if (inBounds(landR, landC) && !board[landR][landC]) threats++;
+          }
+        }
+        score += sign * mob * 2;
+        score += sign * threats * 8;
+        const cd = Math.abs(r - half) + Math.abs(c - half);
+        score += sign * (SIZE - cd) * 0.4;
+        if (kingMoveStreak[p.p] >= 2 && !isKingLimitExempt(p.p)) score -= sign * 8;
+        let ownPawnsNear = 0;
+        for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+          const nr = r + dr, nc = c + dc;
+          if (!inBounds(nr, nc)) continue;
+          const q = board[nr][nc];
+          if (q && q.p === p.p && !q.k) ownPawnsNear++;
+        }
+        score += sign * ownPawnsNear * 1.5;
+      }
+    } else {
+      score += sign * 16;
+      const adv = p.p === P1 ? (SIZE - 1 - r) : r;
+      score += sign * adv * 2.2;
+      if (adv >= SIZE - 3) score += sign * 15;
+      const colCenter = half - Math.abs(c - half);
+      score += sign * colCenter * 0.25;
+      const fwd = p.p === P1 ? -1 : 1;
+      let pawnMob = 0;
+      for (const dc of [-1, 1]) {
+        const nr = r + fwd, nc = c + dc;
+        if (inBounds(nr, nc) && !board[nr][nc]) pawnMob++;
+      }
+      score += sign * pawnMob * 1.0;
+      let support = 0;
+      for (const dc of [-1, 1]) {
+        const nr = r, nc = c + dc;
+        if (inBounds(nr, nc)) {
+          const q = board[nr][nc];
+          if (q && q.p === p.p && !q.k) support++;
+        }
+        const fr = r + fwd, fc = c + dc;
+        if (inBounds(fr, fc)) {
+          const q = board[fr][fc];
+          if (q && q.p === p.p && !q.k) support++;
+        }
+      }
+      score += sign * support * 0.7;
+    }
+  }
+
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (!p || !p.k || p.locked) continue;
+    let adj = 0;
+    for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+      const nr = r + dr, nc = c + dc;
+      if (!inBounds(nr, nc)) continue;
+      const q = board[nr][nc];
+      if (q && q.p !== p.p && !q.k) adj++;
+    }
+    if (adj >= 2) {
+      const sign = p.p === perspective ? 1 : -1;
+      score += sign * (adj >= 3 ? -70 : -40);
+    }
+  }
+
+  const k1 = countKings(P1), k2 = countKings(P2);
+  const myKings = perspective === P1 ? k1 : k2;
+  const oppKings = perspective === P1 ? k2 : k1;
+  const kingDiff = myKings - oppKings;
+  if (kingDiff === 2) score += 250;
+  else if (kingDiff === -2) score -= 300;
+  else if (kingDiff === 1) score += 50;
+  else if (kingDiff === -1) score -= 60;
+
+  return score;
+}
+
+function applyTurnForAI(turn_) {
+  const savedFirst = firstNormalCoronationPlayer;
+  const records = [];
+
+  const firstStep = turn_.steps[0];
+  const firstPiece = firstStep ? board[firstStep.from.r][firstStep.from.c] : null;
+  const movingPlayer = firstPiece ? firstPiece.p : null;
+  const wasKingTurn = firstPiece ? firstPiece.k : false;
+  const wasCaptureTurn = turn_.steps.some(s => !!s.captured);
+  const savedStreak = movingPlayer !== null ? kingMoveStreak[movingPlayer] : 0;
+
+  for (const step of turn_.steps) {
+    const piece = board[step.from.r][step.from.c];
+    if (!piece) break;
+    const rec = {
+      piece, from: {...step.from}, to: {...step.to},
+      wasKing: piece.k, wasLocked: piece.locked,
+      capturedPiece: null, capturedAt: null,
+      jumpedPiece: null, jumpedFrom: null, jumpedTo: null
+    };
+
+    if (step.captured) {
+      rec.capturedPiece = board[step.captured.r][step.captured.c];
+      rec.capturedAt = {...step.captured};
+      board[step.captured.r][step.captured.c] = null;
+    }
+    board[step.from.r][step.from.c] = null;
+    board[step.to.r][step.to.c] = piece;
+
+    if (!piece.k) {
+      const promoRow = piece.p === P1 ? 0 : SIZE - 1;
+      let shouldCrown = !!step.crowned;
+
+      if (!shouldCrown) {
+        if (step.captured && step.to.r === promoRow) {
+          shouldCrown = true;
+        } else if ((step.type === 'diag' || step.type === 'step') && step.to.r === promoRow &&
+                   !isBetweenTwoEnemyPawns(step.to.r, step.to.c, piece.p)) {
+          shouldCrown = true;
+        }
+      }
+
+      if (shouldCrown) {
+        piece.k = true;
+        if (!isCorner(step.to.r, step.to.c) &&
+            (step.to.c === 0 || step.to.c === SIZE - 1)) piece.locked = true;
+        if (firstNormalCoronationPlayer === null) {
+          if (piece.p === P1 && step.to.r === 0) firstNormalCoronationPlayer = P1;
+          else if (piece.p === P2 && step.to.r === SIZE - 1) firstNormalCoronationPlayer = P2;
+        }
+      }
+    }
+
+    if (step.jumpOwn && step.retreat) {
+      rec.jumpedPiece = board[step.jumpOver.r][step.jumpOver.c];
+      rec.jumpedFrom = {...step.jumpOver};
+      rec.jumpedTo = {...step.retreat};
+      board[step.jumpOver.r][step.jumpOver.c] = null;
+      board[step.retreat.r][step.retreat.c] = rec.jumpedPiece;
+    }
+    records.push(rec);
+  }
+
+  if (movingPlayer !== null) {
+    if (wasKingTurn) {
+      if (!wasCaptureTurn) kingMoveStreak[movingPlayer]++;
+    } else {
+      kingMoveStreak[movingPlayer] = 0;
+    }
+  }
+
+  return { records, savedFirst, movingPlayer, savedStreak };
+}
+
+function undoAI(state) {
+  firstNormalCoronationPlayer = state.savedFirst;
+  if (state.movingPlayer !== null && state.movingPlayer !== undefined) {
+    kingMoveStreak[state.movingPlayer] = state.savedStreak;
+  }
+  for (let i = state.records.length - 1; i >= 0; i--) {
+    const rec = state.records[i];
+    if (rec.jumpedPiece) {
+      board[rec.jumpedTo.r][rec.jumpedTo.c] = null;
+      board[rec.jumpedFrom.r][rec.jumpedFrom.c] = rec.jumpedPiece;
+    }
+    board[rec.to.r][rec.to.c] = null;
+    board[rec.from.r][rec.from.c] = rec.piece;
+    rec.piece.k = rec.wasKing;
+    rec.piece.locked = rec.wasLocked;
+    if (rec.capturedPiece) board[rec.capturedAt.r][rec.capturedAt.c] = rec.capturedPiece;
+  }
+}
+
+function exploreChains(player, r, c, hasBackwardDiag, prevSteps, visited) {
+  const piece = board[r][c];
+  if (!piece) return [];
+
+  const orthoActive = hasBackwardDiag === true;
+  const isChainContinuation = prevSteps.length > 0;
+  const captures = getCapturesFrom(r, c, orthoActive, isChainContinuation);
+  if (captures.length === 0) return [];
+
+  const results = [];
+  const ownFirstRow = player === P1 ? SIZE - 1 : 0;
+  const promoRow = player === P1 ? 0 : SIZE - 1;
+  const forward = player === P1 ? -1 : 1;
+
+  for (const cap of captures) {
+    const key = cap.to.r + ',' + cap.to.c;
+    if (visited.has(key)) continue;
+
+    const capturedPiece = board[cap.captured.r][cap.captured.c];
+    board[cap.from.r][cap.from.c] = null;
+    board[cap.to.r][cap.to.c] = piece;
+    board[cap.captured.r][cap.captured.c] = null;
+
+    const newSteps = prevSteps.concat([cap]);
+    const dr = cap.to.r - cap.from.r;
+    const dc = cap.to.c - cap.from.c;
+    const isDiag = Math.abs(dr) === 2 && Math.abs(dc) === 2;
+    const isBwd = isDiag && dr === -forward * 2;
+    const newHasBwd = hasBackwardDiag || isBwd;
+
+    if (!piece.k && newSteps.length >= 2 && cap.to.r === ownFirstRow) {
+      cap.crowned = true;
+      results.push({ steps: newSteps.slice(), captures: newSteps.length, winsByReturn: true, crowned: false });
+      board[cap.to.r][cap.to.c] = null;
+      board[cap.from.r][cap.from.c] = piece;
+      board[cap.captured.r][cap.captured.c] = capturedPiece;
+      continue;
+    }
+
+    let crowned = false;
+    if (!piece.k) {
+      const isEdge = cap.to.c === 0 || cap.to.c === SIZE - 1;
+      const atCorner = isCorner(cap.to.r, cap.to.c);
+      if (!atCorner && isEdge && newSteps.length >= kingBlockMinCaptures) {
+        crowned = true;
+      } else if (cap.to.r === promoRow) {
+        crowned = true;
+      }
+    }
+    if (crowned) {
+      cap.crowned = true;
+      results.push({ steps: newSteps.slice(), captures: newSteps.length, winsByReturn: false, crowned: true });
+      board[cap.to.r][cap.to.c] = null;
+      board[cap.from.r][cap.from.c] = piece;
+      board[cap.captured.r][cap.captured.c] = capturedPiece;
+      continue;
+    }
+
+    if (cap.kingOrtho) {
+      results.push({ steps: newSteps.slice(), captures: newSteps.length, winsByReturn: false, crowned: false });
+      board[cap.to.r][cap.to.c] = null;
+      board[cap.from.r][cap.from.c] = piece;
+      board[cap.captured.r][cap.captured.c] = capturedPiece;
+      continue;
+    }
+
+    const newVisited = new Set(visited);
+    newVisited.add(key);
+    const sub = exploreChains(player, cap.to.r, cap.to.c, newHasBwd, newSteps, newVisited);
+    if (sub.length === 0) {
+      results.push({ steps: newSteps.slice(), captures: newSteps.length, winsByReturn: false, crowned: false });
+    } else {
+      results.push(...sub);
+    }
+
+    board[cap.to.r][cap.to.c] = null;
+    board[cap.from.r][cap.from.c] = piece;
+    board[cap.captured.r][cap.captured.c] = capturedPiece;
+  }
+
+  return results;
+}
+
+function generateNonCapturingTurnsForAI(player) {
+  const turns = [];
+  const canKingMove = kingMoveStreak[player] < 2 || isKingLimitExempt(player);
+
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const piece = board[r][c];
+    if (!piece || piece.p !== player || piece.locked) continue;
+
+    if (piece.k) {
+      if (!canKingMove) continue;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = r + dr, nc = c + dc;
+        if (!inBounds(nr, nc) || board[nr][nc]) continue;
+        if (kingMoveWouldBlockAnyPawn(player, r, c, nr, nc)) continue;
+        turns.push({
+          steps: [{from: {r, c}, to: {r: nr, c: nc}, type: 'king-step'}],
+          captures: 0, winsByReturn: false, crowned: false
+        });
+      }
+    } else {
+      const forward = player === P1 ? -1 : 1;
+      const promoRow = player === P1 ? 0 : SIZE - 1;
+
+      {
+        const nr = r + forward, nc = c;
+        if (inBounds(nr, nc) && !board[nr][nc]) {
+          if (!(nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, player))) {
+            turns.push({
+              steps: [{from: {r, c}, to: {r: nr, c: nc}, type: 'step', crowned: nr === promoRow}],
+              captures: 0, winsByReturn: false, crowned: nr === promoRow
+            });
+          }
+        }
+      }
+
+      for (const dc of [-1, 1]) {
+        const nr = r + forward, nc = c + dc;
+        if (!inBounds(nr, nc) || board[nr][nc]) continue;
+        if (nr === promoRow && isBetweenTwoEnemyPawns(nr, nc, player)) continue;
+        turns.push({
+          steps: [{from: {r, c}, to: {r: nr, c: nc}, type: 'diag', crowned: nr === promoRow}],
+          captures: 0, winsByReturn: false, crowned: nr === promoRow
+        });
+      }
+      const midR = r + forward, midC = c;
+      const landR = r + forward * 2, landC = c;
+      if (inBounds(midR, midC) && board[midR][midC] && inBounds(landR, landC) && !board[landR][landC]) {
+        const jumped = board[midR][midC];
+        if (!jumped.k && landR !== promoRow) {
+          if (jumped.p !== player) {
+            turns.push({
+              steps: [{from: {r, c}, to: {r: landR, c: landC}, type: 'jumpOpponent', jumpOver: {r: midR, c: midC}}],
+              captures: 0, winsByReturn: false, crowned: false
+            });
+          } else {
+            const backRow = midR - forward;
+            const retreats = [{r: backRow, c: midC-1}, {r: backRow, c: midC+1}]
+              .filter(o => inBounds(o.r, o.c) && !board[o.r][o.c]);
+            for (const ret of retreats) {
+              turns.push({
+                steps: [{from: {r, c}, to: {r: landR, c: landC}, type: 'jumpOwn',
+                         jumpOver: {r: midR, c: midC}, jumpOwn: true, retreat: ret}],
+                captures: 0, winsByReturn: false, crowned: false
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+  return turns;
+}
+
+function generateAllTurnsForAI(player) {
+  const turns = [];
+  let hasCapture = false;
+  outer:
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (p && p.p === player && !p.locked && getCapturesFrom(r, c, false).length > 0) { hasCapture = true; break outer; }
+  }
+  if (hasCapture) {
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      const p = board[r][c];
+      if (!p || p.p !== player || p.locked) continue;
+      if (getCapturesFrom(r, c, false).length === 0) continue;
+      turns.push(...exploreChains(player, r, c, false, [], new Set()));
+    }
+  } else {
+    turns.push(...generateNonCapturingTurnsForAI(player));
+  }
+  return turns;
+}
+
+function minimax(player, depth, alpha, beta, perspective, ply, startTime, timeLimit) {
+  if (Date.now() - startTime > timeLimit) return evaluateBoard(perspective);
+
+  const k1 = countKings(P1), k2 = countKings(P2);
+  if (k1 - k2 >= 3) return perspective === P1 ? WIN_SCORE - ply : LOSS_SCORE + ply;
+  if (k2 - k1 >= 3) return perspective === P2 ? WIN_SCORE - ply : LOSS_SCORE + ply;
+
+  if (!hasAnyPawnsOnBoard()) {
+    if (k1 > k2) return perspective === P1 ? WIN_SCORE - ply : LOSS_SCORE + ply;
+    if (k2 > k1) return perspective === P2 ? WIN_SCORE - ply : LOSS_SCORE + ply;
+    if (firstNormalCoronationPlayer === perspective) return WIN_SCORE - ply;
+    if (firstNormalCoronationPlayer === (perspective === P1 ? P2 : P1)) return LOSS_SCORE + ply;
+    return 0;
+  }
+
+  if (depth <= 0) return evaluateBoard(perspective);
+
+  const turns = generateAllTurnsForAI(player);
+  if (turns.length === 0) return player === perspective ? LOSS_SCORE + ply : WIN_SCORE - ply;
+
+  turns.sort((a, b) => {
+    if (a.winsByReturn !== b.winsByReturn) return b.winsByReturn ? 1 : -1;
+    if (a.crowned !== b.crowned) return b.crowned ? 1 : -1;
+    if (a.captures !== b.captures) return b.captures - a.captures;
+    const aKey = moveKey(a.steps[0]);
+    const bKey = moveKey(b.steps[0]);
+    return (historyHeuristic[bKey] || 0) - (historyHeuristic[aKey] || 0);
+  });
+
+  const nextPlayer = player === P1 ? P2 : P1;
+  const maximizing = player === perspective;
+
+  if (maximizing) {
+    let best = -Infinity;
+    for (const t of turns) {
+      const state = applyTurnForAI(t);
+      if (t.winsByReturn) { undoAI(state); return WIN_SCORE - ply; }
+      const ev = minimax(nextPlayer, depth - 1, alpha, beta, perspective, ply + 1, startTime, timeLimit);
+      undoAI(state);
+      if (ev > best) best = ev;
+      if (ev > alpha) alpha = ev;
+      if (beta <= alpha) {
+        if (t.captures === 0 && t.steps.length === 1) {
+          const key = moveKey(t.steps[0]);
+          historyHeuristic[key] = (historyHeuristic[key] || 0) + depth * depth;
+        }
+        break;
+      }
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const t of turns) {
+      const state = applyTurnForAI(t);
+      if (t.winsByReturn) { undoAI(state); return LOSS_SCORE + ply; }
+      const ev = minimax(nextPlayer, depth - 1, alpha, beta, perspective, ply + 1, startTime, timeLimit);
+      undoAI(state);
+      if (ev < best) best = ev;
+      if (ev < beta) beta = ev;
+      if (beta <= alpha) {
+        if (t.captures === 0 && t.steps.length === 1) {
+          const key = moveKey(t.steps[0]);
+          historyHeuristic[key] = (historyHeuristic[key] || 0) + depth * depth;
+        }
+        break;
+      }
+    }
+    return best;
+  }
+}
+
+function chooseEasyMove(player) {
+  const turns = generateAllTurnsForAI(player);
+  if (turns.length === 0) return null;
+  for (const t of turns) if (t.winsByReturn) return t;
+  const scored = turns.map(t => {
+    const state = applyTurnForAI(t);
+    let s = evaluateBoard(player) + t.captures * 10;
+    if (t.crowned) s += 50;
+    undoAI(state);
+    return { t, s };
+  });
+  scored.sort((a, b) => b.s - a.s);
+  const k = Math.max(1, Math.ceil(scored.length * 0.6));
+  return scored[Math.floor(Math.random() * k)].t;
+}
+
+function chooseIterativeMove(player, maxDepth, timeMs) {
+  const startTime = Date.now();
+  const turns = generateAllTurnsForAI(player);
+  if (turns.length === 0) return null;
+  for (const t of turns) if (t.winsByReturn) return t;
+
+  turns.sort((a, b) => {
+    if (a.crowned !== b.crowned) return b.crowned ? 1 : -1;
+    return b.captures - a.captures;
+  });
+  let ordered = turns.slice();
+  let bestTurn = ordered[0];
+  const nextPlayer = player === P1 ? P2 : P1;
+
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    if (Date.now() - startTime > timeMs * 0.9) break;
+    let alpha = -Infinity;
+    let bestVal = -Infinity;
+    let localBest = null;
+    let aborted = false;
+
+    for (const t of ordered) {
+      if (Date.now() - startTime > timeMs) { aborted = true; break; }
+      const state = applyTurnForAI(t);
+      let ev;
+      if (t.winsByReturn) ev = WIN_SCORE;
+      else ev = minimax(nextPlayer, depth - 1, alpha, Infinity, player, 1, startTime, timeMs);
+      undoAI(state);
+      if (ev > bestVal) { bestVal = ev; localBest = t; if (ev > alpha) alpha = ev; }
+    }
+
+    if (!aborted && localBest) {
+      bestTurn = localBest;
+      const idx = ordered.indexOf(localBest);
+      if (idx > 0) { ordered.splice(idx, 1); ordered.unshift(localBest); }
+    }
+    if (bestVal >= WIN_SCORE - 1000 || bestVal <= LOSS_SCORE + 1000) break;
+  }
+  return bestTurn;
+}
+
+function chooseBestMove(player, level) {
+  if (level === 1) return chooseEasyMove(player);
+
+  const { pawns } = countPieces();
+  const piecesOnBoard = pawns + countKings(P1) + countKings(P2);
+  const loadFactor = piecesOnBoard / (SIZE * SIZE * 0.5);
+  const loadClamped = Math.max(0.6, Math.min(1.8, loadFactor));
+
+  if (level === 2) {
+    const maxDepth = SIZE <= 6 ? 5 : SIZE <= 8 ? 4 : SIZE <= 10 ? 3 : 3;
+    const baseMs = SIZE <= 8 ? 1000 : 1500;
+    const timeMs = Math.min(4000, Math.round(baseMs * loadClamped));
+    return chooseIterativeMove(player, maxDepth, timeMs);
+  }
+
+  const maxDepth = SIZE <= 6 ? 8 : SIZE <= 8 ? 6 : SIZE <= 10 ? 5 : 4;
+  const baseMs = SIZE <= 8 ? 2500 : 3500;
+  const timeMs = Math.min(5000, Math.round(baseMs * loadClamped));
+  return chooseIterativeMove(player, maxDepth, timeMs);
+}
+
+const AI_CONSTANTS = `
+const P1 = 1, P2 = 2;
+const WIN_SCORE = 10000000;
+const LOSS_SCORE = -10000000;
+let SIZE = 8;
+let board = [];
+let kingMoveStreak = { [P1]: 0, [P2]: 0 };
+let firstNormalCoronationPlayer = null;
+let kingBlockMinCaptures = 1;
+let historyHeuristic = {};
+`;
+
+const AI_FUNCTIONS = [
+  inBounds, isCorner, isBetweenTwoEnemyPawns, canPawnCaptureKing,
+  getPawnMovesForBlocking, getCapturesFrom, kingMoveWouldBlockAnyPawn,
+  playerHasPawns, isKingLimitExempt, hasAnyPawnsOnBoard,
+  countKings, countPieces,
+  exploreChains, generateNonCapturingTurnsForAI, generateAllTurnsForAI,
+  applyTurnForAI, undoAI, evaluateBoard, moveKey,
+  minimax, chooseEasyMove, chooseIterativeMove, chooseBestMove
+];
+
+const AI_BOOTSTRAP = `
+self.onmessage = (e) => {
+  const m = e.data;
+  if (m.type !== 'think') return;
+  try {
+    SIZE = m.SIZE;
+    board = m.board;
+    kingMoveStreak = m.kingMoveStreak;
+    firstNormalCoronationPlayer = m.firstNormalCoronationPlayer;
+    kingBlockMinCaptures = m.kingBlockMinCaptures;
+    historyHeuristic = {};
+    const result = chooseBestMove(m.player, m.difficulty);
+    self.postMessage({ type: 'move', turnId: m.turnId, turn: result });
+  } catch (err) {
+    self.postMessage({ type: 'error', turnId: m.turnId, error: String((err && err.stack) || err) });
+  }
+};
+`;
+
+const AI_WORKER_SOURCE =
+  AI_CONSTANTS + '\n' +
+  AI_FUNCTIONS.map(f => f.toString()).join('\n') + '\n' +
+  AI_BOOTSTRAP;
+
+function ensureAIWorker() {
+  if (aiWorker || aiWorkerBroken) return;
+  try {
+    const blob = new Blob([AI_WORKER_SOURCE], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    aiWorker = new Worker(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    aiWorker.onmessage = (e) => {
+      const m = e.data;
+      if (m.turnId !== activeTurnId) return;
+      if (aiStopRequested) return;
+      if (m.type === 'error') {
+        console.error('AI worker error:', m.error);
+        aiThinking = false; updateStatus(); draw();
+        return;
+      }
+      aiThinking = false;
+      if (!m.turn) {
+        gameOver = true;
+        winner = currentAIPlayer === P1 ? P2 : P1;
+        winReason = 'noMoves';
+        draw(); updateStatus();
+        return;
+      }
+      executeAITurn(m.turn, 0, currentAIPlayer);
+    };
+    aiWorker.onerror = (err) => {
+      console.warn('AI worker crashed, falling back to sync:', err);
+      aiWorkerBroken = true;
+      if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+      if (aiThinking) { aiThinking = false; aiTurn(); }
+    };
+  } catch (err) {
+    console.warn('Worker creation failed, using sync fallback:', err);
+    aiWorkerBroken = true;
+    aiWorker = null;
+  }
+}
+
+function aiTurn() {
+  if (gameOver || aiThinking || editMode) return;
+  const player = turn;
+  currentAIPlayer = player;
+  aiThinking = true;
+  aiStopRequested = false;
+  updateStatus(); draw();
+
+  if (aiWorkerBroken || typeof Worker === 'undefined') {
+    setTimeout(() => {
+      if (editMode || aiStopRequested) {
+        aiThinking = false; aiStopRequested = false; updateStatus(); draw(); return;
+      }
+      const t = chooseBestMove(player, difficulty);
+      if (aiStopRequested) {
+        aiThinking = false; aiStopRequested = false; updateStatus(); draw(); return;
+      }
+      aiThinking = false;
+      if (!t) {
+        gameOver = true;
+        winner = player === P1 ? P2 : P1;
+        winReason = 'noMoves';
+        draw(); updateStatus();
+        return;
+      }
+      executeAITurn(t, 0, player);
+    }, 150);
+    return;
+  }
+
+  ensureAIWorker();
+  if (!aiWorker) {
+    aiWorkerBroken = true;
+    aiThinking = false;
+    aiTurn();
+    return;
+  }
+
+  activeTurnId = ++aiTurnId;
+  aiWorker.postMessage({
+    type: 'think',
+    turnId: activeTurnId,
+    player,
+    difficulty,
+    SIZE,
+    board: board.map(row => row.map(p => p ? { p: p.p, k: p.k, locked: !!p.locked } : null)),
+    kingMoveStreak: { ...kingMoveStreak },
+    firstNormalCoronationPlayer,
+    kingBlockMinCaptures
+  });
+}
+
+function executeAITurn(turn_, stepIdx, player) {
+  if (editMode) return;
+  if (stepIdx >= turn_.steps.length) {
+    const lastStep = turn_.steps[turn_.steps.length - 1];
+    const lastPiece = board[lastStep.to.r][lastStep.to.c];
+    if (turn_.winsByReturn) {
+      crownAt(lastPiece, lastStep.to.r, lastStep.to.c);
+      gameOver = true; winner = player; winReason = 'return';
+      endTurn(); return;
+    }
+    if (turn_.crowned && lastPiece && !lastPiece.k) {
+      crownAt(lastPiece, lastStep.to.r, lastStep.to.c);
+    }
+    if (checkKingDomination()) { endTurn(); return; }
+    endTurn(); return;
+  }
+
+  const step = turn_.steps[stepIdx];
+  const piece = board[step.from.r][step.from.c];
+  if (!piece) { endTurn(); return; }
+  if (stepIdx === 0) {
+    turnWasKingMove = piece.k;
+    turnWasCapture = false;
+    lastMoveStart = { r: step.from.r, c: step.from.c };
+  }
+  board[step.from.r][step.from.c] = null;
+  board[step.to.r][step.to.c] = piece;
+  if (step.captured) {
+    board[step.captured.r][step.captured.c] = null;
+    turnWasCapture = true;
+  }
+  if (step.jumpOwn && step.retreat) {
+    const jumped = board[step.jumpOver.r][step.jumpOver.c];
+    board[step.jumpOver.r][step.jumpOver.c] = null;
+    board[step.retreat.r][step.retreat.c] = jumped;
+  }
+  lastMoveEnd = { r: step.to.r, c: step.to.c };
+  draw(); updateStatus();
+  if (stepIdx + 1 < turn_.steps.length) setTimeout(() => executeAITurn(turn_, stepIdx + 1, player), 250);
+  else executeAITurn(turn_, stepIdx + 1, player);
+}
+
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let cellSize = 60, px = 480;
+
+function resize() {
+  const wrap = document.querySelector('.board-wrap');
+  const availW = (wrap.clientWidth || 700) - 4;
+  const availH = window.innerHeight - (window.innerWidth <= 820 ? 260 : 60);
+  const S = Math.min(availW, availH, 820);
+  cellSize = Math.max(20, Math.floor(S / SIZE));
+  px = cellSize * SIZE;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(px * dpr); canvas.height = Math.round(px * dpr);
+  canvas.style.width = px + 'px'; canvas.style.height = px + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, px, px);
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const x = c * cellSize, y = r * cellSize;
+    ctx.fillStyle = ((r + c) % 2 === 0) ? '#EDD9B5' : '#6B9E5C';
+    ctx.fillRect(x, y, cellSize, cellSize);
+  }
+
+  if (lastMoveStart && lastMoveEnd) {
+    const fx = lastMoveStart.c * cellSize + cellSize / 2;
+    const fy = lastMoveStart.r * cellSize + cellSize / 2;
+    const tx = lastMoveEnd.c * cellSize + cellSize / 2;
+    const ty = lastMoveEnd.r * cellSize + cellSize / 2;
+    ctx.fillStyle = 'rgba(212,168,67,.30)';
+    ctx.fillRect(lastMoveStart.c * cellSize, lastMoveStart.r * cellSize, cellSize, cellSize);
+    ctx.fillStyle = 'rgba(212,168,67,.45)';
+    ctx.fillRect(lastMoveEnd.c * cellSize, lastMoveEnd.r * cellSize, cellSize, cellSize);
+    if (fx !== tx || fy !== ty) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(212,168,67,.7)';
+      ctx.lineWidth = Math.max(2, cellSize * 0.045);
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+      const angle = Math.atan2(ty - fy, tx - fx);
+      const headLen = cellSize * 0.22;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - headLen * Math.cos(angle - 0.42), ty - headLen * Math.sin(angle - 0.42));
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx - headLen * Math.cos(angle + 0.42), ty - headLen * Math.sin(angle + 0.42));
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.strokeStyle = 'rgba(212,168,67,.85)';
+    ctx.lineWidth = Math.max(1.5, cellSize * 0.03);
+    ctx.strokeRect(lastMoveStart.c * cellSize + 2, lastMoveStart.r * cellSize + 2, cellSize - 4, cellSize - 4);
+    ctx.strokeRect(lastMoveEnd.c * cellSize + 2, lastMoveEnd.r * cellSize + 2, cellSize - 4, cellSize - 4);
+  }
+
+  if (selected) {
+    const { r, c } = selected;
+    ctx.fillStyle = chainActive ? 'rgba(255,120,120,.5)' : 'rgba(255,209,102,.42)';
+    ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+    ctx.strokeStyle = chainActive ? '#FF6464' : '#FFD166';
+    ctx.lineWidth = Math.max(2, cellSize * 0.055);
+    ctx.strokeRect(c * cellSize + 1.5, r * cellSize + 1.5, cellSize - 3, cellSize - 3);
+  }
+  if (selected) {
+    const sel = board[selected.r][selected.c];
+    if (sel && !sel.k && !sel.locked) {
+      for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+        const nr = selected.r + dr, nc = selected.c + dc;
+        if (!inBounds(nr, nc)) continue;
+        const p = board[nr][nc];
+        if (!p || p.p === sel.p || !p.k || p.locked) continue;
+        const landR = selected.r + 2*dr, landC = selected.c + 2*dc;
+        if (!inBounds(landR, landC) || board[landR][landC]) continue;
+        if (!canPawnCaptureKing(sel.p, nr, nc)) {
+          const kx = nc * cellSize + cellSize / 2, ky = nr * cellSize + cellSize / 2;
+          ctx.beginPath(); ctx.arc(kx, ky, cellSize * 0.44, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(160,160,160,.75)';
+          ctx.lineWidth = Math.max(2, cellSize * 0.028);
+          ctx.setLineDash([Math.max(4, cellSize*0.08), Math.max(3, cellSize*0.06)]);
+          ctx.stroke(); ctx.setLineDash([]);
+        }
+      }
+    }
+  }
+  if (pendingOwnJump) {
+    const dt = pendingOwnJump.move.to;
+    const dcx = dt.c * cellSize + cellSize / 2, dcy = dt.r * cellSize + cellSize / 2;
+    ctx.beginPath(); ctx.arc(dcx, dcy, cellSize * 0.14, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,160,50,.55)'; ctx.fill();
+    const jv = pendingOwnJump.move.jumpOver;
+    const jvx = jv.c * cellSize + cellSize / 2, jvy = jv.r * cellSize + cellSize / 2;
+    ctx.beginPath(); ctx.arc(jvx, jvy, cellSize * 0.44, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,160,50,.85)';
+    ctx.lineWidth = Math.max(2, cellSize * 0.04); ctx.stroke();
+    for (const opt of pendingOwnJump.retreatOptions) {
+      const ox = opt.c * cellSize + cellSize / 2, oy = opt.r * cellSize + cellSize / 2;
+      ctx.beginPath(); ctx.arc(ox, oy, cellSize * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,160,50,.95)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(ox, oy, cellSize * 0.2, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(2, cellSize * 0.04); ctx.stroke();
+    }
+  } else {
+    for (const m of legalMoves) {
+      const cx = m.to.c * cellSize + cellSize / 2, cy = m.to.r * cellSize + cellSize / 2;
+      let col;
+      if (m.kingOrtho) col = 'rgba(255,80,200,.95)';
+      else if (m.ortho && m.type === 'capture') col = 'rgba(255,120,40,.95)';
+      else if (m.type === 'capture') col = 'rgba(224,82,82,.9)';
+      else if (m.type === 'jumpOwn') col = 'rgba(255,160,50,.85)';
+      else if (m.type === 'jumpOpponent') col = 'rgba(150,100,255,.85)';
+      else col = 'rgba(60,180,120,.65)';
+      ctx.beginPath(); ctx.arc(cx, cy, cellSize * 0.14, 0, Math.PI * 2);
+      ctx.fillStyle = col; ctx.fill();
+      const jumpAt = m.jumpOver || m.captured;
+      if (jumpAt) {
+        const jx = jumpAt.c * cellSize + cellSize / 2, jy = jumpAt.r * cellSize + cellSize / 2;
+        ctx.beginPath(); ctx.arc(jx, jy, cellSize * 0.44, 0, Math.PI * 2);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = Math.max(2, cellSize * 0.04); ctx.stroke();
+      }
+    }
+  }
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (p) drawPiece(c * cellSize + cellSize / 2, r * cellSize + cellSize / 2, p);
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,.5)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(0, 0, px, px);
+}
+
+function drawPiece(cx, cy, piece) {
+  const rad = cellSize * 0.395;
+  const isWhite = piece.p === P1;
+  const theme = PIECE_THEMES[pieceTheme] || PIECE_THEMES.clasico;
+  const colors = isWhite ? theme.P1 : theme.P2;
+
+  ctx.beginPath(); ctx.arc(cx, cy + rad * 0.14, rad, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fill();
+
+  const grad = ctx.createRadialGradient(cx - rad * 0.32, cy - rad * 0.35, rad * 0.1, cx, cy, rad * 1.02);
+  grad.addColorStop(0, colors.g0);
+  grad.addColorStop(0.55, colors.g1);
+  grad.addColorStop(1, colors.g2);
+  ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.lineWidth = Math.max(1.2, cellSize * 0.028);
+  ctx.strokeStyle = colors.stroke; ctx.stroke();
+
+  if (piece.k && piece.locked) {
+    ctx.beginPath(); ctx.arc(cx, cy, rad * 0.72, 0, Math.PI * 2);
+    ctx.setLineDash([Math.max(3, cellSize*0.06), Math.max(2, cellSize*0.04)]);
+    ctx.lineWidth = Math.max(2.2, cellSize * 0.045);
+    ctx.strokeStyle = '#b088ff'; ctx.stroke(); ctx.setLineDash([]);
+    const lw = rad * 0.36, lh = rad * 0.30;
+    ctx.fillStyle = '#b088ff'; ctx.fillRect(cx - lw/2, cy - lh*0.1, lw, lh);
+    ctx.strokeStyle = '#b088ff'; ctx.lineWidth = Math.max(1.5, cellSize * 0.028);
+    ctx.beginPath(); ctx.arc(cx, cy - lh*0.1, lw*0.3, Math.PI, 0); ctx.stroke();
+  } else if (piece.k) {
+    ctx.beginPath(); ctx.arc(cx, cy, rad * 0.68, 0, Math.PI * 2);
+    ctx.lineWidth = Math.max(2, cellSize * 0.045); ctx.strokeStyle = '#d4a843'; ctx.stroke();
+    ctx.fillStyle = '#d4a843';
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const ang = -Math.PI / 2 + i * (Math.PI * 2 / 5);
+      const r1 = rad * 0.42, r2 = rad * 0.18;
+      const px1 = cx + Math.cos(ang) * r1, py1 = cy + Math.sin(ang) * r1;
+      const ang2 = ang + Math.PI / 5;
+      const px2 = cx + Math.cos(ang2) * r2, py2 = cy + Math.sin(ang2) * r2;
+      if (i === 0) ctx.moveTo(px1, py1); else ctx.lineTo(px1, py1);
+      ctx.lineTo(px2, py2);
+    }
+    ctx.closePath(); ctx.fill();
+    if (kingMoveStreak[piece.p] >= 2 && !isKingLimitExempt(piece.p)) {
+      ctx.beginPath(); ctx.arc(cx, cy, rad * 0.84, 0, Math.PI * 2);
+      ctx.setLineDash([Math.max(2, cellSize*0.04), Math.max(2, cellSize*0.03)]);
+      ctx.lineWidth = Math.max(1.8, cellSize * 0.035);
+      ctx.strokeStyle = 'rgba(255,140,40,.9)'; ctx.stroke(); ctx.setLineDash([]);
+    }
+  } else {
+    ctx.beginPath(); ctx.arc(cx, cy, rad * 0.62, 0, Math.PI * 2);
+    ctx.lineWidth = Math.max(1, cellSize * 0.018);
+    ctx.strokeStyle = colors.inner; ctx.stroke();
+  }
+
+  ctx.beginPath(); ctx.arc(cx - rad * 0.28, cy - rad * 0.3, rad * 0.18, 0, Math.PI * 2);
+  ctx.fillStyle = colors.shine; ctx.fill();
+}
+
+function handleClick(e) {
+  if (gameOver || aiThinking) return;
+  if (isAIPlayer(turn)) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  const c = Math.floor(x / (rect.width / SIZE));
+  const r = Math.floor(y / (rect.height / SIZE));
+  if (!inBounds(r, c)) return;
+
+  if (editMode) {
+    if (editTool === 'empty') board[r][c] = null;
+    else if (editTool === 'wP') board[r][c] = { p: P1, k: false };
+    else if (editTool === 'wK') board[r][c] = { p: P1, k: true };
+    else if (editTool === 'gP') board[r][c] = { p: P2, k: false };
+    else if (editTool === 'gK') board[r][c] = { p: P2, k: true };
+    draw(); updateStatus(); return;
+  }
+
+  if (pendingOwnJump) {
+    const opt = pendingOwnJump.retreatOptions.find(o => o.r === r && o.c === c);
+    if (opt) { executeOwnJumpWithRetreat(pendingOwnJump.move, opt); return; }
+    pendingOwnJump = null;
+  }
+  if (chainActive) {
+    const move = legalMoves.find(m => m.to.r === r && m.to.c === c);
+    if (move) executeMove(move);
+    return;
+  }
+  if (selected) {
+    const move = legalMoves.find(m => m.to.r === r && m.to.c === c);
+    if (move) {
+      if (move.type === 'jumpOwn') {
+        if (move.retreatOptions.length === 1) executeOwnJumpWithRetreat(move, move.retreatOptions[0]);
+        else { pendingOwnJump = { move, retreatOptions: move.retreatOptions }; draw(); updateStatus(); }
+        return;
+      }
+      executeMove(move); return;
+    }
+  }
+  const piece = board[r][c];
+  if (piece && piece.p === turn && !piece.locked) {
+    chainFirstWasForward = null;
+    chainHasBackwardDiag = false;
+    chainOrthoDone = false;
+    chainCaptureCount = 0;
+    const usable = getPieceMoves(r, c);
+    if (usable.length === 0) { selected = null; legalMoves = []; pendingOwnJump = null; draw(); updateStatus(); return; }
+    selected = { r, c }; legalMoves = usable; pendingOwnJump = null;
+    draw(); updateStatus(); return;
+  }
+  selected = null; legalMoves = []; pendingOwnJump = null;
+  chainFirstWasForward = null; chainHasBackwardDiag = false; chainOrthoDone = false; chainCaptureCount = 0;
+  draw(); updateStatus();
+}
+canvas.addEventListener('click', handleClick);
+
+const statusEl = document.getElementById('status');
+const statusTextEl = document.getElementById('statusText');
+const statusDotEl = document.getElementById('statusDot');
+const subtitleEl = document.getElementById('subtitle');
+const btnNew = document.getElementById('btnNew');
+const btnEdit = document.getElementById('btnEdit');
+const btnStopAI = document.getElementById('btnStopAI');
+const btnClearBoard = document.getElementById('btnClearBoard');
+const editPanel = document.getElementById('editPanel');
+const palette = document.getElementById('palette');
+const selSize = document.getElementById('selSize');
+const selDensity = document.getElementById('selDensity');
+const selMode = document.getElementById('selMode');
+const selDiff = document.getElementById('selDiff');
+const selTheme = document.getElementById('selTheme');
+const selKingBlock = document.getElementById('selKingBlock');
+
+const btnToggleRules = document.getElementById('btnToggleRules');
+const rulesInfo = document.getElementById('rulesInfo');
+const btnToggleExtra = document.getElementById('btnToggleExtra');
+const extraInfo = document.getElementById('extraInfo');
+
+function setRulesCollapsed(collapsed) {
+  rulesInfo.classList.toggle('collapsed', collapsed);
+  btnToggleRules.textContent = collapsed ? 'Mostrar reglas' : 'Ocultar reglas';
+}
+let rulesCollapsed = true;
+setRulesCollapsed(rulesCollapsed);
+btnToggleRules.addEventListener('click', () => {
+  rulesCollapsed = !rulesCollapsed;
+  setRulesCollapsed(rulesCollapsed);
+});
+
+function setExtraCollapsed(collapsed) {
+  extraInfo.classList.toggle('collapsed', collapsed);
+  btnToggleExtra.textContent = collapsed ? 'Mostrar detalles' : 'Ocultar detalles';
+}
+let extraCollapsed =true;
+setExtraCollapsed(extraCollapsed);
+btnToggleExtra.addEventListener('click', () => {
+  extraCollapsed = !extraCollapsed;
+  setExtraCollapsed(extraCollapsed);
+});
+
+function updateSubtitle() {
+  const rowsPerSide = rowsPerSideFor(SIZE, density);
+  const piecesPerSide = rowsPerSide * SIZE;
+  const totalPieces = piecesPerSide * 2;
+  const casillas = SIZE * SIZE;
+  const pct = ((totalPieces / casillas) * 100).toFixed(1);
+  subtitleEl.textContent = `${SIZE}×${SIZE} · ${casillas} casillas · ${piecesPerSide} vs ${piecesPerSide} (${pct} %)`;
+}
+
+function updateStatus() {
+  btnStopAI.disabled = !aiThinking;
+
+  const { w, g, kw, kg, lw, lg } = countPieces();
+  document.getElementById('countWhite').textContent = w;
+  document.getElementById('countGreen').textContent = g;
+  document.getElementById('kingsWhite').textContent = kw;
+  document.getElementById('kingsGreen').textContent = kg;
+  document.getElementById('lockedWhite').textContent = lw;
+  document.getElementById('lockedGreen').textContent = lg;
+
+  const noPawns = !hasAnyPawnsOnBoard();
+  const sW = kingMoveStreak[P1];
+  const sG = kingMoveStreak[P2];
+  const streakWhiteEl = document.getElementById('streakWhite');
+  const streakGreenEl = document.getElementById('streakGreen');
+  if (sW > 0) { streakWhiteEl.style.display = ''; document.getElementById('streakValWhite').textContent = sW; }
+  else streakWhiteEl.style.display = 'none';
+  if (sG > 0) { streakGreenEl.style.display = ''; document.getElementById('streakValGreen').textContent = sG; }
+  else streakGreenEl.style.display = 'none';
+
+  statusEl.classList.remove('over', 'choose', 'must', 'chain', 'edit', 'kingblock', 'busy');
+
+  if (editMode) {
+    statusEl.classList.add('edit');
+    statusDotEl.className = 'dot edit';
+    statusTextEl.textContent = 'Modo edición — coloca piezas';
+    return;
+  }
+  if (gameOver) {
+    statusEl.classList.add('over');
+    statusDotEl.className = 'dot gold';
+    if (winReason === 'return') {
+      statusTextEl.textContent = winner === P1 ? '🏆 ¡Victoria por retorno! Ganan blancas' : '🏆 ¡Victoria por retorno! Ganan verdes';
+    } else if (winReason === 'domination') {
+      statusTextEl.textContent = winner === P1 ? '🏆 ¡Dominación! 3+ reyes de ventaja. Ganan blancas' : '🏆 ¡Dominación! 3+ reyes de ventaja. Ganan verdes';
+    } else if (winReason === 'noPawns') {
+      statusTextEl.textContent = winner === P1 ? '🏆 Sin peones — más reyes. Ganan blancas' : '🏆 Sin peones — más reyes. Ganan verdes';
+    } else if (winReason === 'noPawnsFirstCoronation') {
+      statusTextEl.textContent = winner === P1 ? '🏆 Sin peones — primera coronación. Blancas' : '🏆 Sin peones — primera coronación. Verdes';
+    } else if (winReason === 'noPawnsDraw') {
+      statusTextEl.textContent = '⚖️ Sin peones y reyes iguales — tablas';
+    } else if (winReason === 'noMoves') {
+      statusTextEl.textContent = winner === P1 ? '🏆 Rival sin movimientos — ganan blancas' : '🏆 Rival sin movimientos — ganan verdes';
+    } else {
+      statusTextEl.textContent = winner === P1 ? '🏆 ¡Ganan las blancas!' : winner === P2 ? '🏆 ¡Ganan las verdes!' : '⚖️ Tablas';
+    }
+    return;
+  }
+  if (aiThinking) {
+    statusEl.classList.add('busy');
+    statusDotEl.className = 'dot busy';
+    statusTextEl.textContent = 'La IA está pensando…';
+    return;
+  }
+  if (pendingOwnJump) {
+    statusEl.classList.add('choose');
+    statusDotEl.className = 'dot choose';
+    statusTextEl.textContent = 'Elige hacia dónde retrocede el peón saltado';
+    return;
+  }
+  if (chainActive) {
+    statusEl.classList.add('chain');
+    statusDotEl.className = 'dot capture';
+    const chainPiece = selected ? board[selected.r][selected.c] : null;
+    const isKingChain = !!(chainPiece && chainPiece.k);
+    const directionTag = isKingChain ? ' · 8 direcciones' : (isChainOrthoEnabled() ? ' · ortogonal ACTIVA' : '');
+    const countTag = !isKingChain && chainCaptureCount > 0 ? ` · ${chainCaptureCount} capt.` : '';
+    statusTextEl.textContent = `Turno de las ${playerLabel(turn)} · cadena${directionTag}${countTag}`;
+    return;
+  }
+  const mustCapture = playerHasCaptures(turn);
+  if (mustCapture) {
+    statusEl.classList.add('must');
+    statusDotEl.className = 'dot capture';
+    statusTextEl.textContent = `Turno de las ${playerLabel(turn)} · ¡CAPTURA OBLIGATORIA!`;
+    return;
+  }
+  if (kingMoveStreak[turn] >= 2 && !isKingLimitExempt(turn)) {
+    statusEl.classList.add('kingblock');
+    statusDotEl.className = 'dot kingblock';
+    statusTextEl.textContent = noPawns
+      ? `Turno de las ${playerLabel(turn)} · reyes bloqueados (2 turnos)`
+      : `Turno de las ${playerLabel(turn)} · reyes bloqueados — juega un peón`;
+    return;
+  }
+  if (kingMoveStreak[turn] >= 2 && isKingLimitExempt(turn)) {
+    statusDotEl.className = 'dot ' + (turn === P1 ? 'white' : 'black');
+    statusTextEl.textContent = `Turno de las ${playerLabel(turn)} · reyes libres (sin peones)`;
+    return;
+  }
+  statusDotEl.className = 'dot ' + (turn === P1 ? 'white' : 'black');
+  statusTextEl.textContent = `Turno de las ${playerLabel(turn)}`;
+}
+
+function inferFirstCoronationFromBoard() {
+  let p1HasKingOnPromo = false, p2HasKingOnPromo = false;
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+    const p = board[r][c];
+    if (!p || !p.k) continue;
+    if (p.p === P1 && r === 0) p1HasKingOnPromo = true;
+    if (p.p === P2 && r === SIZE - 1) p2HasKingOnPromo = true;
+  }
+  if (p1HasKingOnPromo && !p2HasKingOnPromo) firstNormalCoronationPlayer = P1;
+  else if (p2HasKingOnPromo && !p1HasKingOnPromo) firstNormalCoronationPlayer = P2;
+}
+
+btnNew.addEventListener('click', () => {
+  if (editMode) {
+    editMode = false; editPanel.style.display = 'none';
+    btnEdit.textContent = 'Editar tablero'; btnEdit.classList.remove('edit-active');
+  }
+  initBoard(); draw(); updateStatus();
+  maybeStartAITurn();
+});
+
+btnEdit.addEventListener('click', () => {
+  editMode = !editMode;
+  if (editMode) {
+    editPanel.style.display = 'block';
+    btnEdit.textContent = 'Terminar edición';
+    btnEdit.classList.add('edit-active');
+    selected = null; legalMoves = []; pendingOwnJump = null; chainActive = false;
+    gameOver = false;
+    winner = null;
+    winReason = null;
+    if (aiThinking) {
+      aiStopRequested = true;
+      aiThinking = false;
+      activeTurnId = 0;
+    }
+    draw(); updateStatus();
+  } else {
+    editPanel.style.display = 'none';
+    btnEdit.textContent = 'Editar tablero';
+    btnEdit.classList.remove('edit-active');
+    inferFirstCoronationFromBoard();
+    draw(); updateStatus();
+    maybeStartAITurn();
+  }
+});
+
+palette.addEventListener('click', (e) => {
+  const btn = e.target.closest('.tool');
+  if (!btn) return;
+  editTool = btn.dataset.tool;
+  palette.querySelectorAll('.tool').forEach(t => t.classList.toggle('active', t === btn));
+});
+
+btnClearBoard.addEventListener('click', () => {
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) board[r][c] = null;
+  draw(); updateStatus();
+});
+
+selSize.addEventListener('change', () => {
+  SIZE = parseInt(selSize.value, 10);
+  initBoard(); updateSubtitle(); resize(); draw(); updateStatus();
+  maybeStartAITurn();
+});
+
+selDensity.addEventListener('change', () => {
+  density = selDensity.value;
+  initBoard(); updateSubtitle(); draw(); updateStatus();
+  maybeStartAITurn();
+});
+
+selMode.addEventListener('change', () => {
+  mode = selMode.value;
+  updateStatus();
+  maybeStartAITurn();
+});
+
+selDiff.addEventListener('change', () => {
+  difficulty = parseInt(selDiff.value, 10);
+});
+
+selTheme.addEventListener('change', () => {
+  pieceTheme = selTheme.value;
+  draw();
+});
+
+selKingBlock.addEventListener('change', () => {
+  kingBlockMinCaptures = parseInt(selKingBlock.value, 10);
+});
+
+btnStopAI.addEventListener('click', () => {
+  if (!aiThinking) return;
+  aiStopRequested = true;
+  aiThinking = false;
+  activeTurnId = 0;
+  if (aiWorker) { aiWorker.terminate(); aiWorker = null; }
+  updateStatus(); draw();
+});
+
+window.addEventListener('resize', resize);
+
+SIZE = parseInt(selSize.value, 10);
+initBoard();
+updateSubtitle();
+resize();
+updateStatus();
+maybeStartAITurn();
+</script>
+</body>
+</html>
